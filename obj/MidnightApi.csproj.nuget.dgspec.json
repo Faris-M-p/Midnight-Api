@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Work Area\\MidnightApi\\MidnightApi.csproj": {}
+    "D:\\Work Area\\Midnight\\MidnightApi\\MidnightApi.csproj": {}
   },
   "projects": {
-    "D:\\Work Area\\MidnightApi\\MidnightApi.csproj": {
+    "D:\\Work Area\\Midnight\\MidnightApi\\MidnightApi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Work Area\\MidnightApi\\MidnightApi.csproj",
+        "projectUniqueName": "D:\\Work Area\\Midnight\\MidnightApi\\MidnightApi.csproj",
         "projectName": "MidnightApi",
-        "projectPath": "D:\\Work Area\\MidnightApi\\MidnightApi.csproj",
+        "projectPath": "D:\\Work Area\\Midnight\\MidnightApi\\MidnightApi.csproj",
         "packagesPath": "C:\\Users\\hp\\.nuget\\packages\\",
-        "outputPath": "D:\\Work Area\\MidnightApi\\obj\\",
+        "outputPath": "D:\\Work Area\\Midnight\\MidnightApi\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
