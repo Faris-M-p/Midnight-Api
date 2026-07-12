@@ -1,23 +1,40 @@
+using Microsoft.EntityFrameworkCore;
+using MidnightApi.Data;
+using MidnightApi.Interfaces;
+using MidnightApi.Repositories;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+});
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("DefaultConnection is missing in appsettings.");
+
+builder.Services.AddDbContext<DbConnectionClass>(options =>
+    options.UseNpgsql(connectionString));
+
+builder.Services.AddScoped<IFamilyMemberRepository, FamilyMemberRepository>();
+builder.Services.AddScoped<IMarriageUnionRepository, MarriageUnionRepository>();
+builder.Services.AddScoped<IMilestoneRepository, MilestoneRepository>();
+builder.Services.AddScoped<IFamilyTreeRepository, FamilyTreeRepository>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+await DatabaseInitializer.EnsureCreatedAsync(app.Services, connectionString);
 
+app.UseSwagger();
+app.UseSwaggerUI();
+
+app.UseCors("AllowAll");
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
