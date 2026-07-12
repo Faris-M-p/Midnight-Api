@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using MidnightApi.Data;
 using MidnightApi.Interfaces;
 using MidnightApi.Repositories;
+using MidnightApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,10 +21,15 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<DbConnectionClass>(options =>
     options.UseNpgsql(connectionString));
 
-builder.Services.AddScoped<IFamilyMemberRepository, FamilyMemberRepository>();
-builder.Services.AddScoped<IMarriageUnionRepository, MarriageUnionRepository>();
-builder.Services.AddScoped<IMilestoneRepository, MilestoneRepository>();
-builder.Services.AddScoped<IFamilyTreeRepository, FamilyTreeRepository>();
+builder.Services.AddScoped<IFamiliesRepository, FamiliesRepository>();
+builder.Services.AddScoped<IMembersRepository, MembersRepository>();
+builder.Services.AddScoped<IMemberAddressesRepository, MemberAddressesRepository>();
+builder.Services.AddScoped<IMemberImagesRepository, MemberImagesRepository>();
+builder.Services.AddScoped<IMemberEventsRepository, MemberEventsRepository>();
+builder.Services.AddScoped<IMemberSocialLinksRepository, MemberSocialLinksRepository>();
+builder.Services.AddScoped<IMemberNotesRepository, MemberNotesRepository>();
+builder.Services.AddScoped<IUserAccountsRepository, UserAccountsRepository>();
+builder.Services.AddSingleton<MemberValidationService>();
 
 var app = builder.Build();
 
@@ -31,7 +37,6 @@ await DatabaseInitializer.EnsureCreatedAsync(app.Services, connectionString);
 
 app.UseSwagger();
 app.UseSwaggerUI();
-
 app.UseCors("AllowAll");
 app.UseHttpsRedirection();
 app.UseAuthorization();
