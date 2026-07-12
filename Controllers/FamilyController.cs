@@ -5,8 +5,10 @@ namespace MidnightApi.Controllers;
 
 using MidnightApi.Models.Api;
 
+/// <summary>Manage family groups.</summary>
 [ApiController]
 [Route("api/families")]
+[Tags("Families")]
 public class FamilyController : ControllerBase
 {
     private readonly IFamiliesRepository _families;
@@ -16,12 +18,14 @@ public class FamilyController : ControllerBase
         _families = families;
     }
 
+    /// <summary>Get all families.</summary>
     [HttpGet]
     public async Task<ActionResult<List<OutputGetFamily>>> GetAll()
     {
         return Ok(await _families.GetAllAsync());
     }
 
+    /// <summary>Get a family by id.</summary>
     [HttpGet("{id:long}")]
     public async Task<ActionResult<OutputGetFamily>> GetById(long id)
     {
@@ -34,6 +38,7 @@ public class FamilyController : ControllerBase
         return Ok(family);
     }
 
+    /// <summary>Create a new family.</summary>
     [HttpPost]
     public async Task<ActionResult<OutputGetFamily>> Create([FromBody] InputCreateFamilyView view)
     {
@@ -47,6 +52,7 @@ public class FamilyController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = created.ID_Families }, created);
     }
 
+    /// <summary>Update an existing family.</summary>
     [HttpPut("{id:long}")]
     public async Task<ActionResult<OutputGetFamily>> Update(long id, [FromBody] InputUpdateFamilyView view)
     {
@@ -59,6 +65,7 @@ public class FamilyController : ControllerBase
         return Ok(updated);
     }
 
+    /// <summary>Soft-delete a family.</summary>
     [HttpDelete("{id:long}")]
     public async Task<IActionResult> Delete(long id)
     {

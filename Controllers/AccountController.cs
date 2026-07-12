@@ -8,8 +8,10 @@ namespace MidnightApi.Controllers;
 
 using MidnightApi.Models.Api;
 
+/// <summary>Manage user login accounts linked to members.</summary>
 [ApiController]
 [Route("api/accounts")]
+[Tags("Accounts")]
 public class AccountController : ControllerBase
 {
     private readonly IUserAccountsRepository _accounts;

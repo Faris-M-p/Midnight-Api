@@ -4,12 +4,12 @@ using MidnightApi.Interfaces;
 using MidnightApi.Middleware;
 using MidnightApi.Repositories;
 using MidnightApi.Services;
+using MidnightApi.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerDocumentation();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -37,8 +37,7 @@ var app = builder.Build();
 await DatabaseInitializer.EnsureCreatedAsync(app.Services, connectionString);
 
 app.UseGlobalExceptionHandling();
-app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwaggerDocumentation();
 app.UseCors("AllowAll");
 app.UseHttpsRedirection();
 app.UseAuthorization();

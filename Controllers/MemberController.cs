@@ -6,8 +6,10 @@ namespace MidnightApi.Controllers;
 
 using MidnightApi.Models.Api;
 
+/// <summary>Manage members, family tree views, and member sub-resources.</summary>
 [ApiController]
 [Route("api/members")]
+[Tags("Members")]
 public class MemberController : ControllerBase
 {
     private readonly IMembersRepository _members;
