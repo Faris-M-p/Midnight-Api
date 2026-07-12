@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MidnightApi.Data;
 using MidnightApi.Interfaces;
+using MidnightApi.Middleware;
 using MidnightApi.Repositories;
 using MidnightApi.Services;
 
@@ -35,6 +36,7 @@ var app = builder.Build();
 
 await DatabaseInitializer.EnsureCreatedAsync(app.Services, connectionString);
 
+app.UseGlobalExceptionHandling();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseCors("AllowAll");
