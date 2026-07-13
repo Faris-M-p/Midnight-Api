@@ -1,14 +1,18 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MidnightApi.Auth;
+using MidnightApi.Exceptions;
 using MidnightApi.Interfaces;
 
 namespace MidnightApi.Controllers;
 
 using MidnightApi.Models.Api;
 
-/// <summary>Manage family groups.</summary>
+/// <summary>Family profile for the authenticated family only.</summary>
 [ApiController]
 [Route("api/families")]
 [Tags("Families")]
+[Authorize]
 public class FamilyController : ControllerBase
 {
     private readonly IFamiliesRepository _families;
@@ -18,75 +22,41 @@ public class FamilyController : ControllerBase
         _families = families;
     }
 
-    /// <summary>Get all families.</summary>
-    [HttpGet]
-    public async Task<ActionResult<List<OutputGetFamily>>> GetAll()
+    /// <summary>Get the family belonging to the authenticated account.</summary>
+    [HttpGet("me")]
+    public async Task<IActionResult> GetMyFamily()
     {
-        return Ok(await _families.GetAllAsync());
-    }
+        var family = await _families.GetByIdAsync(User.GetFamilyId())
+            ?? throw new NotFoundException("Family not found.");
 
-    /// <summary>Get a family by id.</summary>
-    [HttpGet("{id:long}")]
-    public async Task<ActionResult<OutputGetFamily>> GetById(long id)
-    {
-        var family = await _families.GetByIdAsync(id);
-        if (family is null)
+        return Ok(new ApiResponse<OutputGetFamily>
         {
-            return NotFound(new { message = "Family not found." });
-        }
-
-        return Ok(family);
+            Success = true,
+            StatusCode = StatusCodes.Status200OK,
+            Message = "Success.",
+            Data = family,
+            TraceId = HttpContext.TraceIdentifier
+        });
     }
 
-    /// <summary>Create a new family.</summary>
-    [HttpPost]
-    public async Task<ActionResult<OutputGetFamily>> Create([FromBody] InputCreateFamilyView view)
+    /// <summary>Update the authenticated family's profile.</summary>
+    [HttpPut("me")]
+    public async Task<IActionResult> UpdateMyFamily([FromBody] InputUpdateFamilyView request)
     {
-        var input = MapToCreateInput(view);
-        if (await _families.ExistsByCodeAsync(input.FamilyCode))
+        var updated = await _families.UpdateAsync(User.GetFamilyId(), new InputUpdateFamily
         {
-            return Conflict(new { message = "Family code already exists." });
-        }
+            FamilyName = request.FamilyName.Trim(),
+            Description = request.Description
+        }, User.GetUsername())
+            ?? throw new NotFoundException("Family not found.");
 
-        var created = await _families.CreateAsync(input, "system");
-        return CreatedAtAction(nameof(GetById), new { id = created.ID_Families }, created);
-    }
-
-    /// <summary>Update an existing family.</summary>
-    [HttpPut("{id:long}")]
-    public async Task<ActionResult<OutputGetFamily>> Update(long id, [FromBody] InputUpdateFamilyView view)
-    {
-        var updated = await _families.UpdateAsync(id, MapToUpdateInput(view), "system");
-        if (updated is null)
+        return Ok(new ApiResponse<OutputGetFamily>
         {
-            return NotFound(new { message = "Family not found." });
-        }
-
-        return Ok(updated);
+            Success = true,
+            StatusCode = StatusCodes.Status200OK,
+            Message = "Family updated successfully.",
+            Data = updated,
+            TraceId = HttpContext.TraceIdentifier
+        });
     }
-
-    /// <summary>Soft-delete a family.</summary>
-    [HttpDelete("{id:long}")]
-    public async Task<IActionResult> Delete(long id)
-    {
-        if (!await _families.SoftDeleteAsync(id, "system"))
-        {
-            return NotFound(new { message = "Family not found." });
-        }
-
-        return NoContent();
-    }
-
-    private static InputCreateFamily MapToCreateInput(InputCreateFamilyView view) => new()
-    {
-        FamilyCode = view.FamilyCode,
-        FamilyName = view.FamilyName,
-        Description = view.Description
-    };
-
-    private static InputUpdateFamily MapToUpdateInput(InputUpdateFamilyView view) => new()
-    {
-        FamilyName = view.FamilyName,
-        Description = view.Description
-    };
 }

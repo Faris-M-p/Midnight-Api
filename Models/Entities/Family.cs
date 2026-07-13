@@ -17,4 +17,5 @@ public class Family : AuditableEntity
     public string? Description { get; set; }
 
     public ICollection<Member> Members { get; set; } = [];
+    public UserAccount? UserAccount { get; set; }
 }

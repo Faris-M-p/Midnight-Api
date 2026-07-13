@@ -7,7 +7,8 @@ public class UserAccount : AuditableEntity
     [Key]
     public long ID_UserAccounts { get; set; }
 
-    public long FK_Members { get; set; }
+    /// <summary>One admin account owns exactly one family.</summary>
+    public long FK_Families { get; set; }
 
     [Required, MaxLength(100)]
     public string Username { get; set; } = string.Empty;
@@ -19,5 +20,6 @@ public class UserAccount : AuditableEntity
     public string PasswordHash { get; set; } = string.Empty;
 
     public bool IsActive { get; set; } = true;
-    public Member Member { get; set; } = null!;
+
+    public Family Family { get; set; } = null!;
 }

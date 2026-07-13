@@ -103,5 +103,19 @@ public static class DatabaseInitializer
             new Member { FK_Families = family.ID_Families, FK_Members_Parent = child1.ID_Members, FirstName = "Emily", LastName = "Demo", Gender = "Female", DateOfBirth = new DateOnly(2000, 2, 14), CreatedBy = "seed" },
             new Member { FK_Families = family.ID_Families, FK_Members_Parent = child2.ID_Members, FirstName = "David", LastName = "Demo", Gender = "Male", DateOfBirth = new DateOnly(2003, 11, 30), CreatedBy = "seed" });
         await db.SaveChangesAsync();
+
+        // Demo admin: username demo / password Demo@123 — one account owns this family.
+        var passwordService = new MidnightApi.Services.PasswordService();
+        db.UserAccounts.Add(new UserAccount
+        {
+            FK_Families = family.ID_Families,
+            Username = "demo",
+            Email = "demo@midnight.local",
+            PasswordHash = passwordService.Hash("Demo@123"),
+            IsActive = true,
+            CreatedBy = "seed",
+            CreatedOn = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
     }
 }

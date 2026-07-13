@@ -17,7 +17,7 @@ public class DefaultResponsesOperationFilter : IOperationFilter
             {
                 ["application/json"] = new OpenApiMediaType
                 {
-                    Schema = context.SchemaGenerator.GenerateSchema(typeof(ErrorResponse), context.SchemaRepository)
+                    Schema = context.SchemaGenerator.GenerateSchema(typeof(ApiResponse<object?>), context.SchemaRepository)
                 }
             }
         });

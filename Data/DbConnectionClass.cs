@@ -50,9 +50,21 @@ public class DbConnectionClass : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<UserAccount>()
-            .HasOne(u => u.Member)
-            .WithOne(m => m.UserAccount)
-            .HasForeignKey<UserAccount>(u => u.FK_Members)
+            .HasOne(u => u.Family)
+            .WithOne(f => f.UserAccount)
+            .HasForeignKey<UserAccount>(u => u.FK_Families)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<UserAccount>()
+            .HasIndex(u => u.Username)
+            .IsUnique();
+
+        modelBuilder.Entity<UserAccount>()
+            .HasIndex(u => u.FK_Families)
+            .IsUnique();
+
+        modelBuilder.Entity<Family>()
+            .HasIndex(f => f.FamilyCode)
+            .IsUnique();
     }
 }

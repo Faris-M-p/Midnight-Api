@@ -1,148 +1,199 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MidnightApi.Auth;
+using MidnightApi.Exceptions;
 using MidnightApi.Interfaces;
 using MidnightApi.Services;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace MidnightApi.Controllers;
 
 using MidnightApi.Models.Api;
 
-/// <summary>Manage user login accounts linked to members.</summary>
+/// <summary>Admin registration, login, and account profile (one account = one family).</summary>
 [ApiController]
 [Route("api/accounts")]
 [Tags("Accounts")]
 public class AccountController : ControllerBase
 {
     private readonly IUserAccountsRepository _accounts;
-    private readonly IMembersRepository _members;
+    private readonly IFamiliesRepository _families;
+    private readonly PasswordService _passwords;
+    private readonly JwtTokenService _jwt;
     private readonly MemberValidationService _validation;
 
     public AccountController(
         IUserAccountsRepository accounts,
-        IMembersRepository members,
+        IFamiliesRepository families,
+        PasswordService passwords,
+        JwtTokenService jwt,
         MemberValidationService validation)
     {
         _accounts = accounts;
-        _members = members;
+        _families = families;
+        _passwords = passwords;
+        _jwt = jwt;
         _validation = validation;
     }
 
-    [HttpGet]
-    public async Task<ActionResult<List<OutputGetAccount>>> GetAll()
+    /// <summary>Register admin account and create its one family.</summary>
+    [HttpPost("register")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Register([FromBody] InputRegisterAccountView request)
     {
-        return Ok(await _accounts.GetAllAsync());
-    }
-
-    [HttpGet("{id:long}")]
-    public async Task<ActionResult<OutputGetAccount>> GetById(long id)
-    {
-        var item = await _accounts.GetByIdAsync(id);
-        if (item is null)
+        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
         {
-            return NotFound(new { message = "Account not found." });
+            throw new BadRequestException("Username and password are required.");
         }
 
-        return Ok(item);
-    }
-
-    [HttpGet("member/{memberId:long}")]
-    public async Task<ActionResult<OutputGetAccount>> GetByMember(long memberId)
-    {
-        var item = await _accounts.GetByMemberIdAsync(memberId);
-        if (item is null)
+        if (string.IsNullOrWhiteSpace(request.FamilyCode) || string.IsNullOrWhiteSpace(request.FamilyName))
         {
-            return NotFound(new { message = "Account not found." });
+            throw new BadRequestException("Family code and family name are required.");
         }
 
-        return Ok(item);
-    }
-
-    [HttpPost]
-    public async Task<ActionResult<OutputGetAccount>> Create([FromBody] InputCreateAccountView view)
-    {
-        var input = MapToCreateAccountInput(view);
-        if (await _members.GetByIdAsync(input.FK_Members) is null)
-        {
-            return NotFound(new { message = "Member not found." });
-        }
-
-        if (await _accounts.GetByMemberIdAsync(input.FK_Members) is not null)
-        {
-            return Conflict(new { message = "Member already has an account." });
-        }
-
-        if (await _accounts.ExistsByUsernameAsync(input.Username))
-        {
-            return Conflict(new { message = "Username already exists." });
-        }
-
-        var emailError = _validation.ValidateEmail(input.Email);
+        var emailError = _validation.ValidateEmail(request.Email);
         if (emailError is not null)
         {
-            return BadRequest(new { message = emailError });
+            throw new BadRequestException(emailError);
         }
 
-        var created = await _accounts.CreateAsync(input, "system");
-        return CreatedAtAction(nameof(GetById), new { id = created.ID_UserAccounts }, created);
+        if (await _accounts.ExistsByUsernameAsync(request.Username.Trim()))
+        {
+            throw new ConflictException("Username already exists.");
+        }
+
+        if (await _families.ExistsByCodeAsync(request.FamilyCode.Trim()))
+        {
+            throw new ConflictException("Family code already exists.");
+        }
+
+        var family = await _families.CreateAsync(new InputCreateFamily
+        {
+            FamilyCode = request.FamilyCode.Trim(),
+            FamilyName = request.FamilyName.Trim(),
+            Description = request.Description
+        }, request.Username.Trim());
+
+        var account = await _accounts.CreateAsync(new InputCreateAccount
+        {
+            FK_Families = family.ID_Families,
+            Username = request.Username.Trim(),
+            Email = request.Email.Trim(),
+            PasswordHash = _passwords.Hash(request.Password),
+            IsActive = true
+        }, request.Username.Trim());
+
+        return StatusCode(StatusCodes.Status201Created, new ApiResponse<OutputRegister>
+        {
+            Success = true,
+            StatusCode = StatusCodes.Status201Created,
+            Message = "Account registered successfully.",
+            Data = new OutputRegister
+            {
+                AccountId = account.ID_UserAccounts,
+                FamilyId = family.ID_Families,
+                Username = account.Username
+            },
+            TraceId = HttpContext.TraceIdentifier
+        });
     }
 
-    [HttpPut("{id:long}")]
-    public async Task<ActionResult<OutputGetAccount>> Update(long id, [FromBody] InputUpdateAccountView view)
+    /// <summary>Admin login. Returns JWT with FamilyId claim.</summary>
+    [HttpPost("login")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Login([FromBody] InputLoginView request)
     {
-        var input = MapToUpdateAccountInput(view);
-        if (await _accounts.ExistsByUsernameAsync(input.Username, id))
+        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
         {
-            return Conflict(new { message = "Username already exists." });
+            throw new BadRequestException("Username and password are required.");
         }
 
-        var emailError = _validation.ValidateEmail(input.Email);
+        var login = await _accounts.GetLoginByUsernameAsync(request.Username.Trim());
+        if (login is null || !_passwords.Verify(request.Password, login.Value.PasswordHash))
+        {
+            throw new UnauthorizedAccessException("Invalid username or password.");
+        }
+
+        var account = login.Value.Account;
+        if (!account.IsActive)
+        {
+            throw new UnauthorizedAccessException("Account is disabled.");
+        }
+
+        if (await _families.GetByIdAsync(account.FK_Families) is null)
+        {
+            throw new NotFoundException("Family linked to this account was not found.");
+        }
+
+        var (token, expiresAt) = _jwt.CreateAdminToken(
+            account.ID_UserAccounts,
+            account.FK_Families,
+            account.Username);
+
+        return Ok(new ApiResponse<OutputLogin>
+        {
+            Success = true,
+            StatusCode = StatusCodes.Status200OK,
+            Message = "Login successful.",
+            Data = new OutputLogin
+            {
+                AccessToken = token,
+                ExpiresAtUtc = expiresAt
+            },
+            TraceId = HttpContext.TraceIdentifier
+        });
+    }
+
+    /// <summary>Get the authenticated admin account.</summary>
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<IActionResult> GetMe()
+    {
+        var account = await _accounts.GetByIdAsync(User.GetAccountId())
+            ?? throw new NotFoundException("Account not found.");
+
+        return Ok(new ApiResponse<OutputGetAccount>
+        {
+            Success = true,
+            StatusCode = StatusCodes.Status200OK,
+            Message = "Success.",
+            Data = account,
+            TraceId = HttpContext.TraceIdentifier
+        });
+    }
+
+    /// <summary>Update the authenticated admin account profile.</summary>
+    [HttpPut("me")]
+    [Authorize]
+    public async Task<IActionResult> UpdateMe([FromBody] InputUpdateAccountView request)
+    {
+        var accountId = User.GetAccountId();
+
+        if (await _accounts.ExistsByUsernameAsync(request.Username.Trim(), accountId))
+        {
+            throw new ConflictException("Username already exists.");
+        }
+
+        var emailError = _validation.ValidateEmail(request.Email);
         if (emailError is not null)
         {
-            return BadRequest(new { message = emailError });
+            throw new BadRequestException(emailError);
         }
 
-        var updated = await _accounts.UpdateAsync(id, input, "system");
-
-        if (updated is null)
+        var updated = await _accounts.UpdateAsync(accountId, new InputUpdateAccount
         {
-            return NotFound(new { message = "Account not found." });
-        }
+            Username = request.Username.Trim(),
+            Email = request.Email.Trim(),
+            PasswordHash = string.IsNullOrWhiteSpace(request.Password) ? null : _passwords.Hash(request.Password)
+        }, User.GetUsername())
+            ?? throw new NotFoundException("Account not found.");
 
-        return Ok(updated);
-    }
-
-    [HttpDelete("{id:long}")]
-    public async Task<IActionResult> Delete(long id)
-    {
-        if (!await _accounts.SoftDeleteAsync(id, "system"))
+        return Ok(new ApiResponse<OutputGetAccount>
         {
-            return NotFound(new { message = "Account not found." });
-        }
-
-        return NoContent();
+            Success = true,
+            StatusCode = StatusCodes.Status200OK,
+            Message = "Account updated successfully.",
+            Data = updated,
+            TraceId = HttpContext.TraceIdentifier
+        });
     }
-
-    private static string HashPassword(string password)
-    {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(password));
-        return Convert.ToHexString(bytes);
-    }
-
-    private static InputCreateAccount MapToCreateAccountInput(InputCreateAccountView view) => new()
-    {
-        FK_Members = view.FK_Members,
-        Username = view.Username,
-        Email = view.Email,
-        PasswordHash = HashPassword(view.Password),
-        IsActive = view.IsActive
-    };
-
-    private static InputUpdateAccount MapToUpdateAccountInput(InputUpdateAccountView view) => new()
-    {
-        Username = view.Username,
-        Email = view.Email,
-        PasswordHash = string.IsNullOrWhiteSpace(view.Password) ? null : HashPassword(view.Password),
-        IsActive = view.IsActive
-    };
 }

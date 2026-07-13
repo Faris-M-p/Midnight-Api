@@ -15,13 +15,30 @@ public static class SwaggerExtensions
                 Title = "Midnight Family Tree API",
                 Version = "v1",
                 Description = """
-                    REST API for managing family trees, member profiles, and user accounts.
+                    Family Tree Management API.
 
-                    **Controllers**
-                    - **Families** — create and manage family groups
-                    - **Members** — members, tree views, spouses, children, and sub-resources
-                    - **Accounts** — login accounts linked to members
+                    **Auth**
+                    1. `POST /api/accounts/register` — create admin + one family
+                    2. `POST /api/accounts/login` — receive JWT
+                    3. Click **Authorize**, paste: `Bearer {token}`
+
+                    FamilyId always comes from the JWT — never from the client.
                     """
+            });
+
+            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                Name = "Authorization",
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                In = ParameterLocation.Header,
+                Description = "Paste the JWT from /api/accounts/login. Example: Bearer eyJhbGciOi..."
+            });
+
+            options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecuritySchemeReference("Bearer", document)] = []
             });
 
             var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";

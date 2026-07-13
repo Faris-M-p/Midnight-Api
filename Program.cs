@@ -1,15 +1,21 @@
 using Microsoft.EntityFrameworkCore;
 using MidnightApi.Data;
+using MidnightApi.Filters;
 using MidnightApi.Interfaces;
 using MidnightApi.Middleware;
+using MidnightApi.Auth;
 using MidnightApi.Repositories;
 using MidnightApi.Services;
 using MidnightApi.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ApiResponseResultFilter>();
+});
 builder.Services.AddSwaggerDocumentation();
+builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -31,6 +37,8 @@ builder.Services.AddScoped<IMemberSocialLinksRepository, MemberSocialLinksReposi
 builder.Services.AddScoped<IMemberNotesRepository, MemberNotesRepository>();
 builder.Services.AddScoped<IUserAccountsRepository, UserAccountsRepository>();
 builder.Services.AddSingleton<MemberValidationService>();
+builder.Services.AddSingleton<PasswordService>();
+builder.Services.AddSingleton<JwtTokenService>();
 
 var app = builder.Build();
 
@@ -40,6 +48,7 @@ app.UseGlobalExceptionHandling();
 app.UseSwaggerDocumentation();
 app.UseCors("AllowAll");
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

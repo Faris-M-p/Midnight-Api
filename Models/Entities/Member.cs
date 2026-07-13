@@ -45,5 +45,4 @@ public class Member : AuditableEntity
     public ICollection<MemberEvent> Events { get; set; } = [];
     public ICollection<MemberSocialLink> SocialLinks { get; set; } = [];
     public ICollection<MemberNote> Notes { get; set; } = [];
-    public UserAccount? UserAccount { get; set; }
 }

@@ -9,7 +9,8 @@ public class ExceptionHandlingMiddleware
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
     };
 
     private readonly RequestDelegate _next;
@@ -40,7 +41,7 @@ public class ExceptionHandlingMiddleware
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        var (statusCode, message) = MapException(exception);
+        var (statusCode, message, code) = MapException(exception);
 
         if (statusCode >= StatusCodes.Status500InternalServerError)
         {
@@ -51,13 +52,29 @@ public class ExceptionHandlingMiddleware
             _logger.LogWarning(exception, "Request failed with {StatusCode} for {Method} {Path}", statusCode, context.Request.Method, context.Request.Path);
         }
 
-        var response = new ErrorResponse
+        var errors = new List<ApiError>
         {
-            StatusCode = statusCode,
-            Message = message,
-            TraceId = context.TraceIdentifier,
-            Details = _environment.IsDevelopment() ? exception.ToString() : null
+            new()
+            {
+                Code = code,
+                Message = message
+            }
         };
+
+        if (_environment.IsDevelopment() && statusCode >= StatusCodes.Status500InternalServerError)
+        {
+            errors.Add(new ApiError
+            {
+                Code = "EXCEPTION_DETAILS",
+                Message = exception.ToString()
+            });
+        }
+
+        var response = ApiResponse<object?>.Fail(
+            message,
+            statusCode,
+            traceId: context.TraceIdentifier,
+            errors: errors);
 
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = statusCode;
@@ -65,18 +82,18 @@ public class ExceptionHandlingMiddleware
         await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonOptions));
     }
 
-    private static (int StatusCode, string Message) MapException(Exception exception)
+    private static (int StatusCode, string Message, string Code) MapException(Exception exception)
     {
         return exception switch
         {
-            AppException appException => (appException.StatusCode, appException.Message),
-            KeyNotFoundException keyNotFound => (StatusCodes.Status404NotFound, keyNotFound.Message),
-            ArgumentException argument => (StatusCodes.Status400BadRequest, argument.Message),
-            UnauthorizedAccessException unauthorized => (StatusCodes.Status401Unauthorized, unauthorized.Message),
-            DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "The record was modified by another request."),
+            AppException appException => (appException.StatusCode, appException.Message, appException.GetType().Name.Replace("Exception", string.Empty).ToUpperInvariant()),
+            KeyNotFoundException keyNotFound => (StatusCodes.Status404NotFound, keyNotFound.Message, "NOT_FOUND"),
+            ArgumentException argument => (StatusCodes.Status400BadRequest, argument.Message, "BAD_REQUEST"),
+            UnauthorizedAccessException unauthorized => (StatusCodes.Status401Unauthorized, unauthorized.Message, "UNAUTHORIZED"),
+            DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "The record was modified by another request.", "CONCURRENCY_CONFLICT"),
             DbUpdateException dbUpdate when IsUniqueConstraintViolation(dbUpdate) =>
-                (StatusCodes.Status409Conflict, "A record with the same unique value already exists."),
-            _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred.")
+                (StatusCodes.Status409Conflict, "A record with the same unique value already exists.", "UNIQUE_CONSTRAINT"),
+            _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred.", "INTERNAL_ERROR")
         };
     }
 
