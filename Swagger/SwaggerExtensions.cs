@@ -17,12 +17,8 @@ public static class SwaggerExtensions
                 Description = """
                     Family Tree Management API.
 
-                    **Auth**
-                    1. `POST /api/accounts/register` — create admin + one family
-                    2. `POST /api/accounts/login` — receive JWT
-                    3. Click **Authorize**, paste: `Bearer {token}`
-
-                    FamilyId always comes from the JWT — never from the client.
+                    Controllers: Accounts, Family, Members.
+                    FamilyId always comes from the JWT.
                     """
             });
 

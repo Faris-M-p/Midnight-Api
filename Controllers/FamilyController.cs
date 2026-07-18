@@ -8,23 +8,23 @@ namespace MidnightApi.Controllers;
 
 using MidnightApi.Models.Api;
 
-/// <summary>Family profile for the authenticated family only.</summary>
 [ApiController]
-[Route("api/families")]
-[Tags("Families")]
+[Route("api/family")]
+[Tags("Family")]
 [Authorize]
 public class FamilyController : ControllerBase
 {
     private readonly IFamiliesRepository _families;
+    private readonly IMembersRepository _members;
 
-    public FamilyController(IFamiliesRepository families)
+    public FamilyController(IFamiliesRepository families, IMembersRepository members)
     {
         _families = families;
+        _members = members;
     }
 
-    /// <summary>Get the family belonging to the authenticated account.</summary>
-    [HttpGet("me")]
-    public async Task<IActionResult> GetMyFamily()
+    [HttpGet]
+    public async Task<IActionResult> Get()
     {
         var family = await _families.GetByIdAsync(User.GetFamilyId())
             ?? throw new NotFoundException("Family not found.");
@@ -39,9 +39,8 @@ public class FamilyController : ControllerBase
         });
     }
 
-    /// <summary>Update the authenticated family's profile.</summary>
-    [HttpPut("me")]
-    public async Task<IActionResult> UpdateMyFamily([FromBody] InputUpdateFamilyView request)
+    [HttpPut]
+    public async Task<IActionResult> Update([FromBody] InputUpdateFamilyView request)
     {
         var updated = await _families.UpdateAsync(User.GetFamilyId(), new InputUpdateFamily
         {
@@ -56,6 +55,36 @@ public class FamilyController : ControllerBase
             StatusCode = StatusCodes.Status200OK,
             Message = "Family updated successfully.",
             Data = updated,
+            TraceId = HttpContext.TraceIdentifier
+        });
+    }
+
+    [HttpGet("dashboard")]
+    public async Task<IActionResult> GetDashboard()
+    {
+        var data = await _members.GetDashboardAsync(User.GetFamilyId());
+
+        return Ok(new ApiResponse<OutputDashboard>
+        {
+            Success = true,
+            StatusCode = StatusCodes.Status200OK,
+            Message = "Success.",
+            Data = data,
+            TraceId = HttpContext.TraceIdentifier
+        });
+    }
+
+    [HttpGet("timeline")]
+    public async Task<IActionResult> GetTimeline()
+    {
+        var data = await _members.GetTimelineAsync(User.GetFamilyId());
+
+        return Ok(new ApiResponse<List<OutputTimelineItem>>
+        {
+            Success = true,
+            StatusCode = StatusCodes.Status200OK,
+            Message = "Success.",
+            Data = data,
             TraceId = HttpContext.TraceIdentifier
         });
     }

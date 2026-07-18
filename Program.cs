@@ -30,11 +30,6 @@ builder.Services.AddDbContext<DbConnectionClass>(options =>
 
 builder.Services.AddScoped<IFamiliesRepository, FamiliesRepository>();
 builder.Services.AddScoped<IMembersRepository, MembersRepository>();
-builder.Services.AddScoped<IMemberAddressesRepository, MemberAddressesRepository>();
-builder.Services.AddScoped<IMemberImagesRepository, MemberImagesRepository>();
-builder.Services.AddScoped<IMemberEventsRepository, MemberEventsRepository>();
-builder.Services.AddScoped<IMemberSocialLinksRepository, MemberSocialLinksRepository>();
-builder.Services.AddScoped<IMemberNotesRepository, MemberNotesRepository>();
 builder.Services.AddScoped<IUserAccountsRepository, UserAccountsRepository>();
 builder.Services.AddSingleton<MemberValidationService>();
 builder.Services.AddSingleton<PasswordService>();

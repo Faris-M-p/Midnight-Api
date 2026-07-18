@@ -39,7 +39,7 @@ public partial class MemberValidationService
 
         if (spouseId.HasValue && spouseId.Value == memberId)
         {
-            return "A member cannot be their own spouse.";
+            return "A member cannot marry themselves.";
         }
 
         return null;
@@ -95,5 +95,63 @@ public partial class MemberValidationService
         }
 
         return null;
+    }
+
+    public async Task<string?> ValidateMapSpouseAsync(
+        long memberId,
+        long spouseId,
+        Func<long, Task<(long? ParentId, long? SpouseId)>> getRelationAsync)
+    {
+        if (memberId == spouseId)
+        {
+            return "A member cannot marry themselves.";
+        }
+
+        var left = await getRelationAsync(memberId);
+        var right = await getRelationAsync(spouseId);
+
+        if (left.SpouseId.HasValue || right.SpouseId.HasValue)
+        {
+            return "One or both members already have a spouse.";
+        }
+
+        if (left.ParentId == spouseId || right.ParentId == memberId)
+        {
+            return "Parent-child relationship cannot be mapped as spouses.";
+        }
+
+        if (left.ParentId.HasValue && right.ParentId.HasValue && left.ParentId == right.ParentId)
+        {
+            return "Sibling relationship cannot be mapped as spouses.";
+        }
+
+        if (await IsAncestorAsync(memberId, spouseId, async id => (await getRelationAsync(id)).ParentId)
+            || await IsAncestorAsync(spouseId, memberId, async id => (await getRelationAsync(id)).ParentId))
+        {
+            return "Ancestor-descendant relationship cannot be mapped as spouses.";
+        }
+
+        return null;
+    }
+
+    private static async Task<bool> IsAncestorAsync(
+        long ancestorId,
+        long descendantId,
+        Func<long, Task<long?>> getParentIdAsync)
+    {
+        var current = await getParentIdAsync(descendantId);
+        var visited = new HashSet<long>();
+
+        while (current.HasValue && visited.Add(current.Value))
+        {
+            if (current.Value == ancestorId)
+            {
+                return true;
+            }
+
+            current = await getParentIdAsync(current.Value);
+        }
+
+        return false;
     }
 }

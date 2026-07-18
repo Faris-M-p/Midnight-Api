@@ -1,12 +1,5 @@
 namespace MidnightApi.Models.Api;
 
-public class InputCreateFamily
-{
-    public string FamilyCode { get; set; } = string.Empty;
-    public string FamilyName { get; set; } = string.Empty;
-    public string? Description { get; set; }
-}
-
 public class InputUpdateFamily
 {
     public string FamilyName { get; set; } = string.Empty;
@@ -15,6 +8,13 @@ public class InputUpdateFamily
 
 public class InputUpdateFamilyView
 {
+    public string FamilyName { get; set; } = string.Empty;
+    public string? Description { get; set; }
+}
+
+public class InputCreateFamily
+{
+    public string FamilyCode { get; set; } = string.Empty;
     public string FamilyName { get; set; } = string.Empty;
     public string? Description { get; set; }
 }

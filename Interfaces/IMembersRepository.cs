@@ -1,22 +1,22 @@
-
 namespace MidnightApi.Interfaces;
 
 using MidnightApi.Models.Api;
 
 public interface IMembersRepository
 {
-    Task<List<OutputGetMember>> GetAllAsync();
-    Task<OutputGetMember?> GetByIdAsync(long id);
-    Task<OutputGetMemberProfile?> GetByIdWithDetailsAsync(long id);
-    Task<List<OutputGetMember>> GetByFamilyIdAsync(InputGetFamilyMembers input);
-    Task<OutputGetMember?> GetRootByFamilyIdAsync(long familyId);
-    Task<OutputGetMemberTree?> GetRootWithTreeDataAsync(InputGetMemberTree input);
-    Task<List<OutputGetMember>> SearchByNameAsync(InputSearchMembers input);
-    Task<List<OutputGetMember>> GetByGenerationAsync(InputGetMembersByGeneration input);
-    Task<OutputGetMember> CreateAsync(InputCreateMember input, string createdBy);
-    Task<OutputGetMember?> UpdateAsync(long id, InputUpdateMember input, string updatedBy);
-    Task<bool> SoftDeleteAsync(long id, string deletedBy);
+    Task<OutputPagedMembers> GetListAsync(long familyId, InputMemberListQuery query);
+    Task<OutputMemberProfile?> GetProfileAsync(long familyId, long memberId);
+    Task<OutputMemberProfile> CreateAsync(long familyId, InputSaveMember input, string createdBy);
+    Task<OutputMemberProfile?> UpdateAsync(long familyId, long memberId, InputSaveMember input, string updatedBy);
+    Task<bool> SoftDeleteAsync(long familyId, long memberId, string deletedBy);
+    Task<OutputMemberProfile> AddChildAsync(long familyId, long parentId, InputSaveMember child, string createdBy);
+    Task<OutputMemberProfile> AddSpouseAsync(long familyId, long memberId, InputSaveMember spouse, string createdBy);
+    Task MapSpouseAsync(long familyId, long memberId, long spouseId, string updatedBy);
+    Task<OutputFamilyTree> GetTreeAsync(long familyId);
+    Task<OutputDashboard> GetDashboardAsync(long familyId);
+    Task<List<OutputTimelineItem>> GetTimelineAsync(long familyId);
+    Task<bool> ExistsInFamilyAsync(long familyId, long memberId);
     Task<bool> HasRootMemberAsync(long familyId, long? excludeMemberId = null);
     Task<long?> GetParentIdAsync(long memberId);
-    Task LinkSpouseAsync(long memberId, long spouseId, string updatedBy);
+    Task<(long? ParentId, long? SpouseId)?> GetRelationAsync(long familyId, long memberId);
 }

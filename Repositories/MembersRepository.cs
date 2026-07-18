@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MidnightApi.Data;
+using MidnightApi.Exceptions;
 using MidnightApi.Interfaces;
 using MidnightApi.Models.Entities;
 
@@ -16,239 +17,667 @@ public class MembersRepository : IMembersRepository
         _db = db;
     }
 
-    public async Task<List<OutputGetMember>> GetAllAsync()
+    public async Task<OutputPagedMembers> GetListAsync(long familyId, InputMemberListQuery query)
     {
-        var members = await _db.Members
-            .Where(member => !member.IsCancelled)
-            .OrderBy(member => member.FirstName)
-            .ThenBy(member => member.LastName)
+        var page = query.Page < 1 ? 1 : query.Page;
+        var pageSize = query.PageSize is < 1 or > 100 ? 20 : query.PageSize;
+
+        var members = _db.Members
+            .AsNoTracking()
+            .Where(m => m.FK_Families == familyId && !m.IsCancelled);
+
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var term = query.Search.Trim().ToLower();
+            members = members.Where(m =>
+                m.FirstName.ToLower().Contains(term)
+                || m.LastName.ToLower().Contains(term)
+                || (m.FirstName + " " + m.LastName).ToLower().Contains(term));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Gender))
+        {
+            members = members.Where(m => m.Gender == query.Gender);
+        }
+
+        members = (query.SortBy?.ToLower()) switch
+        {
+            "lastname" => query.SortDesc
+                ? members.OrderByDescending(m => m.LastName).ThenBy(m => m.FirstName)
+                : members.OrderBy(m => m.LastName).ThenBy(m => m.FirstName),
+            "dob" => query.SortDesc
+                ? members.OrderByDescending(m => m.DateOfBirth)
+                : members.OrderBy(m => m.DateOfBirth),
+            _ => query.SortDesc
+                ? members.OrderByDescending(m => m.FirstName).ThenByDescending(m => m.LastName)
+                : members.OrderBy(m => m.FirstName).ThenBy(m => m.LastName)
+        };
+
+        var total = await members.CountAsync();
+        var rows = await members
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Include(m => m.Images.Where(i => !i.IsCancelled))
             .ToListAsync();
 
-        return members.Select(MapToOutput).ToList();
-    }
-
-    public async Task<OutputGetMember?> GetByIdAsync(long id)
-    {
-        var member = await _db.Members
-            .FirstOrDefaultAsync(member => member.ID_Members == id && !member.IsCancelled);
-
-        return member is null ? null : MapToOutput(member);
-    }
-
-    public async Task<OutputGetMemberProfile?> GetByIdWithDetailsAsync(long id)
-    {
-        var member = await _db.Members
-            .Where(member => member.ID_Members == id && !member.IsCancelled)
-            .Include(member => member.Addresses.Where(address => !address.IsCancelled))
-            .Include(member => member.Images.Where(image => !image.IsCancelled))
-            .Include(member => member.Events.Where(memberEvent => !memberEvent.IsCancelled))
-            .Include(member => member.SocialLinks.Where(link => !link.IsCancelled))
-            .Include(member => member.Notes.Where(note => !note.IsCancelled))
-            .FirstOrDefaultAsync();
-
-        return member is null ? null : MapToProfileOutput(member);
-    }
-
-    public async Task<List<OutputGetMember>> GetByFamilyIdAsync(InputGetFamilyMembers input)
-    {
-        var members = await _db.Members
-            .Where(member => member.FK_Families == input.FamilyId && !member.IsCancelled)
-            .OrderBy(member => member.FirstName)
-            .ThenBy(member => member.LastName)
-            .ToListAsync();
-
-        return members.Select(MapToOutput).ToList();
-    }
-
-    public async Task<OutputGetMember?> GetRootByFamilyIdAsync(long familyId)
-    {
-        var member = await _db.Members
-            .FirstOrDefaultAsync(member =>
-                member.FK_Families == familyId && member.IsRoot && !member.IsCancelled);
-
-        return member is null ? null : MapToOutput(member);
-    }
-
-    public async Task<OutputGetMemberTree?> GetRootWithTreeDataAsync(InputGetMemberTree input)
-    {
-        var root = await _db.Members
-            .Where(member => member.FK_Families == input.FamilyId && member.IsRoot && !member.IsCancelled)
-            .Include(member => member.Images.Where(image => !image.IsCancelled))
-            .Include(member => member.Events.Where(memberEvent => !memberEvent.IsCancelled))
-            .Include(member => member.Notes.Where(note => !note.IsCancelled))
-            .Include(member => member.SocialLinks.Where(link => !link.IsCancelled))
-            .FirstOrDefaultAsync();
-
-        if (root is null)
+        return new OutputPagedMembers
         {
-            return null;
-        }
-
-        await LoadSpouseDetailsAsync(root);
-        await LoadChildrenRecursiveAsync(root);
-        return MapToTreeOutput(root);
+            Items = rows.Select(MapToListItem).ToList(),
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = total,
+            TotalPages = total == 0 ? 0 : (int)Math.Ceiling(total / (double)pageSize)
+        };
     }
 
-    public async Task<List<OutputGetMember>> SearchByNameAsync(InputSearchMembers input)
+    public async Task<OutputMemberProfile?> GetProfileAsync(long familyId, long memberId)
     {
-        var normalized = input.Name.Trim().ToLower();
-        var query = _db.Members.Where(member => !member.IsCancelled);
-
-        if (input.FamilyId.HasValue)
-        {
-            query = query.Where(member => member.FK_Families == input.FamilyId.Value);
-        }
-
-        var members = await query
-            .Where(member =>
-                (member.FirstName + " " + member.LastName).ToLower().Contains(normalized) ||
-                member.FirstName.ToLower().Contains(normalized) ||
-                member.LastName.ToLower().Contains(normalized))
-            .OrderBy(member => member.FirstName)
-            .ThenBy(member => member.LastName)
-            .ToListAsync();
-
-        return members.Select(MapToOutput).ToList();
+        var member = await LoadProfileEntityAsync(familyId, memberId);
+        return member is null ? null : await MapToProfileAsync(member);
     }
 
-    public async Task<List<OutputGetMember>> GetByGenerationAsync(InputGetMembersByGeneration input)
+    public async Task<OutputMemberProfile> CreateAsync(long familyId, InputSaveMember input, string createdBy)
     {
-        if (input.Level < 0)
-        {
-            return [];
-        }
+        await using var tx = await _db.Database.BeginTransactionAsync();
 
-        var roots = await _db.Members
-            .Where(member => member.FK_Families == input.FamilyId && member.IsRoot && !member.IsCancelled)
-            .OrderBy(member => member.FirstName)
-            .ThenBy(member => member.LastName)
-            .ToListAsync();
-
-        if (input.Level == 0)
-        {
-            return roots.Select(MapToOutput).ToList();
-        }
-
-        var currentGenerationIds = roots.Select(member => member.ID_Members).ToList();
-
-        for (var generation = 1; generation <= input.Level; generation++)
-        {
-            var nextGeneration = await _db.Members
-                .Where(member =>
-                    member.FK_Families == input.FamilyId &&
-                    !member.IsCancelled &&
-                    member.FK_Members_Parent.HasValue &&
-                    currentGenerationIds.Contains(member.FK_Members_Parent.Value))
-                .OrderBy(member => member.FirstName)
-                .ThenBy(member => member.LastName)
-                .ToListAsync();
-
-            if (generation == input.Level)
-            {
-                return nextGeneration.Select(MapToOutput).ToList();
-            }
-
-            currentGenerationIds = nextGeneration.Select(member => member.ID_Members).ToList();
-        }
-
-        return [];
-    }
-
-    public async Task<OutputGetMember> CreateAsync(InputCreateMember input, string createdBy)
-    {
-        var member = MapToEntity(input, createdBy);
+        var member = MapToEntity(familyId, input, createdBy);
         _db.Members.Add(member);
         await _db.SaveChangesAsync();
-        return MapToOutput(member);
+
+        await SyncNestedAsync(member.ID_Members, input, createdBy, replaceMissing: false);
+        await ApplySpouseLinkAsync(member, input.SpouseId, createdBy);
+        await _db.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        return (await GetProfileAsync(familyId, member.ID_Members))!;
     }
 
-    public async Task<OutputGetMember?> UpdateAsync(long id, InputUpdateMember input, string updatedBy)
+    public async Task<OutputMemberProfile?> UpdateAsync(long familyId, long memberId, InputSaveMember input, string updatedBy)
     {
+        await using var tx = await _db.Database.BeginTransactionAsync();
+
         var existing = await _db.Members
-            .FirstOrDefaultAsync(member => member.ID_Members == id && !member.IsCancelled);
+            .FirstOrDefaultAsync(m => m.ID_Members == memberId && m.FK_Families == familyId && !m.IsCancelled);
         if (existing is null)
         {
             return null;
         }
 
-        existing.FK_Members_Parent = input.FK_Members_Parent;
-        existing.FK_Members_Spouse = input.FK_Members_Spouse;
-        existing.FirstName = input.FirstName;
-        existing.LastName = input.LastName;
-        existing.Email = input.Email;
-        existing.Phone = input.Phone;
-        existing.Gender = input.Gender;
-        existing.DateOfBirth = input.DateOfBirth;
-        existing.DateOfDeath = input.DateOfDeath;
-        existing.IsRoot = input.IsRoot;
-        existing.Biography = input.Biography;
-        existing.Profession = input.Profession;
-        existing.UpdatedBy = updatedBy;
-        existing.UpdatedOn = DateTime.UtcNow;
-
+        ApplyBasicFields(existing, input, updatedBy);
+        await SyncNestedAsync(memberId, input, updatedBy, replaceMissing: true);
+        await ApplySpouseLinkAsync(existing, input.SpouseId, updatedBy);
         await _db.SaveChangesAsync();
-        return MapToOutput(existing);
+        await tx.CommitAsync();
+
+        return await GetProfileAsync(familyId, memberId);
     }
 
-    public async Task<bool> SoftDeleteAsync(long id, string deletedBy)
+    public async Task<bool> SoftDeleteAsync(long familyId, long memberId, string deletedBy)
     {
         var existing = await _db.Members
-            .FirstOrDefaultAsync(member => member.ID_Members == id && !member.IsCancelled);
+            .FirstOrDefaultAsync(m => m.ID_Members == memberId && m.FK_Families == familyId && !m.IsCancelled);
         if (existing is null)
         {
             return false;
         }
 
+        if (existing.FK_Members_Spouse.HasValue)
+        {
+            var spouse = await _db.Members
+                .FirstOrDefaultAsync(m => m.ID_Members == existing.FK_Members_Spouse && !m.IsCancelled);
+            if (spouse is not null)
+            {
+                spouse.FK_Members_Spouse = null;
+                spouse.UpdatedBy = deletedBy;
+                spouse.UpdatedOn = DateTime.UtcNow;
+            }
+
+            existing.FK_Members_Spouse = null;
+        }
+
         existing.IsCancelled = true;
         existing.CancelledBy = deletedBy;
         existing.CancelledOn = DateTime.UtcNow;
-
         await _db.SaveChangesAsync();
         return true;
     }
 
-    public async Task<bool> HasRootMemberAsync(long familyId, long? excludeMemberId = null)
+    public async Task<OutputMemberProfile> AddChildAsync(long familyId, long parentId, InputSaveMember child, string createdBy)
     {
-        var query = _db.Members
-            .Where(member => member.FK_Families == familyId && member.IsRoot && !member.IsCancelled);
+        var parent = await _db.Members
+            .FirstOrDefaultAsync(m => m.ID_Members == parentId && m.FK_Families == familyId && !m.IsCancelled)
+            ?? throw new NotFoundException("Parent member not found.");
 
-        if (excludeMemberId.HasValue)
+        child.ParentId = parent.ID_Members;
+        child.IsRoot = false;
+        return await CreateAsync(familyId, child, createdBy);
+    }
+
+    public async Task<OutputMemberProfile> AddSpouseAsync(long familyId, long memberId, InputSaveMember spouseInput, string createdBy)
+    {
+        var member = await _db.Members
+            .FirstOrDefaultAsync(m => m.ID_Members == memberId && m.FK_Families == familyId && !m.IsCancelled)
+            ?? throw new NotFoundException("Member not found.");
+
+        if (member.FK_Members_Spouse.HasValue)
         {
-            query = query.Where(member => member.ID_Members != excludeMemberId.Value);
+            throw new ConflictException("Member already has a spouse.");
         }
 
-        return await query.AnyAsync();
+        spouseInput.IsRoot = false;
+        spouseInput.ParentId = null;
+        spouseInput.SpouseId = null;
+
+        await using var tx = await _db.Database.BeginTransactionAsync();
+        var spouse = MapToEntity(familyId, spouseInput, createdBy);
+        _db.Members.Add(spouse);
+        await _db.SaveChangesAsync();
+
+        await SyncNestedAsync(spouse.ID_Members, spouseInput, createdBy, replaceMissing: false);
+
+        member.FK_Members_Spouse = spouse.ID_Members;
+        spouse.FK_Members_Spouse = member.ID_Members;
+        member.UpdatedBy = createdBy;
+        member.UpdatedOn = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        return (await GetProfileAsync(familyId, spouse.ID_Members))!;
+    }
+
+    public async Task MapSpouseAsync(long familyId, long memberId, long spouseId, string updatedBy)
+    {
+        var member = await _db.Members
+            .FirstOrDefaultAsync(m => m.ID_Members == memberId && m.FK_Families == familyId && !m.IsCancelled)
+            ?? throw new NotFoundException("Member not found.");
+
+        var spouse = await _db.Members
+            .FirstOrDefaultAsync(m => m.ID_Members == spouseId && m.FK_Families == familyId && !m.IsCancelled)
+            ?? throw new NotFoundException("Spouse member not found.");
+
+        member.FK_Members_Spouse = spouse.ID_Members;
+        spouse.FK_Members_Spouse = member.ID_Members;
+        member.UpdatedBy = updatedBy;
+        spouse.UpdatedBy = updatedBy;
+        member.UpdatedOn = DateTime.UtcNow;
+        spouse.UpdatedOn = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task<OutputFamilyTree> GetTreeAsync(long familyId)
+    {
+        var total = await _db.Members.CountAsync(m => m.FK_Families == familyId && !m.IsCancelled);
+        var root = await _db.Members
+            .Where(m => m.FK_Families == familyId && m.IsRoot && !m.IsCancelled)
+            .Include(m => m.Images.Where(i => !i.IsCancelled))
+            .FirstOrDefaultAsync();
+
+        if (root is null)
+        {
+            return new OutputFamilyTree { TotalMembers = total };
+        }
+
+        await LoadSpouseDetailsAsync(root);
+        await LoadChildrenRecursiveAsync(root);
+
+        return new OutputFamilyTree
+        {
+            Root = MapToTreeNode(root),
+            TotalMembers = total
+        };
+    }
+
+    public async Task<OutputDashboard> GetDashboardAsync(long familyId)
+    {
+        var family = await _db.Families
+            .AsNoTracking()
+            .FirstOrDefaultAsync(f => f.ID_Families == familyId && !f.IsCancelled)
+            ?? throw new NotFoundException("Family not found.");
+
+        var members = await _db.Members
+            .AsNoTracking()
+            .Where(m => m.FK_Families == familyId && !m.IsCancelled)
+            .Include(m => m.Images.Where(i => !i.IsCancelled))
+            .ToListAsync();
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var upcoming = members
+            .Where(m => m.DateOfBirth.HasValue && m.DateOfDeath is null)
+            .Select(m =>
+            {
+                var dob = m.DateOfBirth!.Value;
+                var next = new DateOnly(today.Year, dob.Month, Math.Min(dob.Day, DateTime.DaysInMonth(today.Year, dob.Month)));
+                if (next < today)
+                {
+                    next = new DateOnly(today.Year + 1, dob.Month, Math.Min(dob.Day, DateTime.DaysInMonth(today.Year + 1, dob.Month)));
+                }
+
+                return new OutputUpcomingBirthday
+                {
+                    MemberId = m.ID_Members,
+                    FullName = $"{m.FirstName} {m.LastName}",
+                    DateOfBirth = dob,
+                    TurningAge = next.Year - dob.Year,
+                    DaysUntil = next.DayNumber - today.DayNumber
+                };
+            })
+            .OrderBy(x => x.DaysUntil)
+            .Take(5)
+            .ToList();
+
+        return new OutputDashboard
+        {
+            Family = new OutputGetFamily
+            {
+                ID_Families = family.ID_Families,
+                FamilyCode = family.FamilyCode,
+                FamilyName = family.FamilyName,
+                Description = family.Description
+            },
+            TotalMembers = members.Count,
+            TotalGenerations = await CountGenerationsAsync(familyId),
+            RecentMembers = members
+                .OrderByDescending(m => m.CreatedOn)
+                .Take(5)
+                .Select(MapToListItem)
+                .ToList(),
+            UpcomingBirthdays = upcoming,
+            Stats = new OutputDashboardStats
+            {
+                MaleCount = members.Count(m => string.Equals(m.Gender, "Male", StringComparison.OrdinalIgnoreCase)),
+                FemaleCount = members.Count(m => string.Equals(m.Gender, "Female", StringComparison.OrdinalIgnoreCase)),
+                OtherGenderCount = members.Count(m =>
+                    !string.Equals(m.Gender, "Male", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(m.Gender, "Female", StringComparison.OrdinalIgnoreCase)),
+                LivingCount = members.Count(m => m.DateOfDeath is null),
+                DeceasedCount = members.Count(m => m.DateOfDeath is not null)
+            }
+        };
+    }
+
+    public async Task<List<OutputTimelineItem>> GetTimelineAsync(long familyId)
+    {
+        var events = await _db.MemberEvents
+            .AsNoTracking()
+            .Where(e => !e.IsCancelled && e.Member.FK_Families == familyId && !e.Member.IsCancelled)
+            .Include(e => e.Member)
+            .OrderByDescending(e => e.EventDate)
+            .ThenBy(e => e.Title)
+            .ToListAsync();
+
+        return events.Select(e => new OutputTimelineItem
+        {
+            EventId = e.ID_MemberEvents,
+            MemberId = e.FK_Members,
+            MemberName = $"{e.Member.FirstName} {e.Member.LastName}",
+            EventType = e.EventType,
+            Title = e.Title,
+            Description = e.Description,
+            EventDate = e.EventDate
+        }).ToList();
+    }
+
+    public Task<bool> ExistsInFamilyAsync(long familyId, long memberId) =>
+        _db.Members.AnyAsync(m => m.ID_Members == memberId && m.FK_Families == familyId && !m.IsCancelled);
+
+    public Task<bool> HasRootMemberAsync(long familyId, long? excludeMemberId = null)
+    {
+        var query = _db.Members.Where(m => m.FK_Families == familyId && m.IsRoot && !m.IsCancelled);
+        if (excludeMemberId.HasValue)
+        {
+            query = query.Where(m => m.ID_Members != excludeMemberId.Value);
+        }
+
+        return query.AnyAsync();
     }
 
     public async Task<long?> GetParentIdAsync(long memberId)
     {
         return await _db.Members
-            .Where(member => member.ID_Members == memberId && !member.IsCancelled)
-            .Select(member => member.FK_Members_Parent)
+            .Where(m => m.ID_Members == memberId && !m.IsCancelled)
+            .Select(m => m.FK_Members_Parent)
             .FirstOrDefaultAsync();
     }
 
-    public async Task LinkSpouseAsync(long memberId, long spouseId, string updatedBy)
+    public async Task<(long? ParentId, long? SpouseId)?> GetRelationAsync(long familyId, long memberId)
     {
-        var member = await _db.Members
-            .FirstOrDefaultAsync(m => m.ID_Members == memberId && !m.IsCancelled);
-        var spouse = await _db.Members
-            .FirstOrDefaultAsync(m => m.ID_Members == spouseId && !m.IsCancelled);
+        var row = await _db.Members
+            .AsNoTracking()
+            .Where(m => m.ID_Members == memberId && m.FK_Families == familyId && !m.IsCancelled)
+            .Select(m => new { m.FK_Members_Parent, m.FK_Members_Spouse })
+            .FirstOrDefaultAsync();
 
-        if (member is null || spouse is null)
+        return row is null ? null : (row.FK_Members_Parent, row.FK_Members_Spouse);
+    }
+
+    private async Task<int> CountGenerationsAsync(long familyId)
+    {
+        var root = await _db.Members
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.FK_Families == familyId && m.IsRoot && !m.IsCancelled);
+        if (root is null)
+        {
+            return 0;
+        }
+
+        var all = await _db.Members
+            .AsNoTracking()
+            .Where(m => m.FK_Families == familyId && !m.IsCancelled)
+            .Select(m => new { m.ID_Members, m.FK_Members_Parent })
+            .ToListAsync();
+
+        var childrenMap = all
+            .Where(m => m.FK_Members_Parent.HasValue)
+            .GroupBy(m => m.FK_Members_Parent!.Value)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.ID_Members).ToList());
+
+        var maxDepth = 1;
+        void Walk(long id, int depth)
+        {
+            maxDepth = Math.Max(maxDepth, depth);
+            if (!childrenMap.TryGetValue(id, out var kids))
+            {
+                return;
+            }
+
+            foreach (var kid in kids)
+            {
+                Walk(kid, depth + 1);
+            }
+        }
+
+        Walk(root.ID_Members, 1);
+        return maxDepth;
+    }
+
+    private async Task ApplySpouseLinkAsync(Member member, long? spouseId, string actor)
+    {
+        if (!spouseId.HasValue)
         {
             return;
         }
 
-        member.FK_Members_Spouse = spouseId;
-        member.UpdatedBy = updatedBy;
-        member.UpdatedOn = DateTime.UtcNow;
+        var spouse = await _db.Members
+            .FirstOrDefaultAsync(m =>
+                m.ID_Members == spouseId.Value
+                && m.FK_Families == member.FK_Families
+                && !m.IsCancelled)
+            ?? throw new NotFoundException("Spouse member not found.");
 
-        spouse.FK_Members_Spouse = memberId;
-        spouse.UpdatedBy = updatedBy;
+        member.FK_Members_Spouse = spouse.ID_Members;
+        spouse.FK_Members_Spouse = member.ID_Members;
+        spouse.UpdatedBy = actor;
         spouse.UpdatedOn = DateTime.UtcNow;
+    }
 
-        await _db.SaveChangesAsync();
+    private async Task SyncNestedAsync(long memberId, InputSaveMember input, string actor, bool replaceMissing)
+    {
+        if (input.Addresses is not null)
+        {
+            await SyncAddressesAsync(memberId, input.Addresses, actor, replaceMissing);
+        }
+
+        if (input.Images is not null)
+        {
+            await SyncImagesAsync(memberId, input.Images, actor, replaceMissing);
+        }
+
+        if (input.Events is not null)
+        {
+            await SyncEventsAsync(memberId, input.Events, actor, replaceMissing);
+        }
+
+        if (input.Notes is not null)
+        {
+            await SyncNotesAsync(memberId, input.Notes, actor, replaceMissing);
+        }
+
+        if (input.SocialLinks is not null)
+        {
+            await SyncSocialLinksAsync(memberId, input.SocialLinks, actor, replaceMissing);
+        }
+    }
+
+    private async Task SyncAddressesAsync(long memberId, List<MemberAddressItem> items, string actor, bool replaceMissing)
+    {
+        var existing = await _db.MemberAddresses
+            .Where(a => a.FK_Members == memberId && !a.IsCancelled)
+            .ToListAsync();
+
+        foreach (var item in items)
+        {
+            if (item.Id.HasValue)
+            {
+                var row = existing.FirstOrDefault(a => a.ID_MemberAddresses == item.Id.Value)
+                    ?? throw new NotFoundException("Address not found.");
+                row.AddressLine1 = item.AddressLine1;
+                row.AddressLine2 = item.AddressLine2;
+                row.City = item.City;
+                row.State = item.State;
+                row.Country = item.Country;
+                row.PostalCode = item.PostalCode;
+                row.IsPrimary = item.IsPrimary;
+                row.UpdatedBy = actor;
+                row.UpdatedOn = DateTime.UtcNow;
+            }
+            else
+            {
+                _db.MemberAddresses.Add(new MemberAddress
+                {
+                    FK_Members = memberId,
+                    AddressLine1 = item.AddressLine1,
+                    AddressLine2 = item.AddressLine2,
+                    City = item.City,
+                    State = item.State,
+                    Country = item.Country,
+                    PostalCode = item.PostalCode,
+                    IsPrimary = item.IsPrimary,
+                    CreatedBy = actor,
+                    CreatedOn = DateTime.UtcNow
+                });
+            }
+        }
+
+        if (replaceMissing)
+        {
+            var keep = items.Where(i => i.Id.HasValue).Select(i => i.Id!.Value).ToHashSet();
+            foreach (var row in existing.Where(a => !keep.Contains(a.ID_MemberAddresses)))
+            {
+                SoftCancel(row, actor);
+            }
+        }
+    }
+
+    private async Task SyncImagesAsync(long memberId, List<MemberImageItem> items, string actor, bool replaceMissing)
+    {
+        var existing = await _db.MemberImages
+            .Where(i => i.FK_Members == memberId && !i.IsCancelled)
+            .ToListAsync();
+
+        foreach (var item in items)
+        {
+            if (item.Id.HasValue)
+            {
+                var row = existing.FirstOrDefault(i => i.ID_MemberImages == item.Id.Value)
+                    ?? throw new NotFoundException("Image not found.");
+                row.ImageUrl = item.ImageUrl;
+                row.Caption = item.Caption;
+                row.IsPrimary = item.IsPrimary;
+                row.SortOrder = item.SortOrder;
+                row.UpdatedBy = actor;
+                row.UpdatedOn = DateTime.UtcNow;
+            }
+            else
+            {
+                _db.MemberImages.Add(new MemberImage
+                {
+                    FK_Members = memberId,
+                    ImageUrl = item.ImageUrl,
+                    Caption = item.Caption,
+                    IsPrimary = item.IsPrimary,
+                    SortOrder = item.SortOrder,
+                    CreatedBy = actor,
+                    CreatedOn = DateTime.UtcNow
+                });
+            }
+        }
+
+        if (replaceMissing)
+        {
+            var keep = items.Where(i => i.Id.HasValue).Select(i => i.Id!.Value).ToHashSet();
+            foreach (var row in existing.Where(i => !keep.Contains(i.ID_MemberImages)))
+            {
+                SoftCancel(row, actor);
+            }
+        }
+    }
+
+    private async Task SyncEventsAsync(long memberId, List<MemberEventItem> items, string actor, bool replaceMissing)
+    {
+        var existing = await _db.MemberEvents
+            .Where(e => e.FK_Members == memberId && !e.IsCancelled)
+            .ToListAsync();
+
+        foreach (var item in items)
+        {
+            if (item.Id.HasValue)
+            {
+                var row = existing.FirstOrDefault(e => e.ID_MemberEvents == item.Id.Value)
+                    ?? throw new NotFoundException("Event not found.");
+                row.EventType = item.EventType;
+                row.Title = item.Title;
+                row.Description = item.Description;
+                row.EventDate = item.EventDate;
+                row.UpdatedBy = actor;
+                row.UpdatedOn = DateTime.UtcNow;
+            }
+            else
+            {
+                _db.MemberEvents.Add(new MemberEvent
+                {
+                    FK_Members = memberId,
+                    EventType = item.EventType,
+                    Title = item.Title,
+                    Description = item.Description,
+                    EventDate = item.EventDate,
+                    CreatedBy = actor,
+                    CreatedOn = DateTime.UtcNow
+                });
+            }
+        }
+
+        if (replaceMissing)
+        {
+            var keep = items.Where(i => i.Id.HasValue).Select(i => i.Id!.Value).ToHashSet();
+            foreach (var row in existing.Where(e => !keep.Contains(e.ID_MemberEvents)))
+            {
+                SoftCancel(row, actor);
+            }
+        }
+    }
+
+    private async Task SyncNotesAsync(long memberId, List<MemberNoteItem> items, string actor, bool replaceMissing)
+    {
+        var existing = await _db.MemberNotes
+            .Where(n => n.FK_Members == memberId && !n.IsCancelled)
+            .ToListAsync();
+
+        foreach (var item in items)
+        {
+            if (item.Id.HasValue)
+            {
+                var row = existing.FirstOrDefault(n => n.ID_MemberNotes == item.Id.Value)
+                    ?? throw new NotFoundException("Note not found.");
+                row.Title = item.Title;
+                row.Content = item.Content;
+                row.UpdatedBy = actor;
+                row.UpdatedOn = DateTime.UtcNow;
+            }
+            else
+            {
+                _db.MemberNotes.Add(new MemberNote
+                {
+                    FK_Members = memberId,
+                    Title = item.Title,
+                    Content = item.Content,
+                    CreatedBy = actor,
+                    CreatedOn = DateTime.UtcNow
+                });
+            }
+        }
+
+        if (replaceMissing)
+        {
+            var keep = items.Where(i => i.Id.HasValue).Select(i => i.Id!.Value).ToHashSet();
+            foreach (var row in existing.Where(n => !keep.Contains(n.ID_MemberNotes)))
+            {
+                SoftCancel(row, actor);
+            }
+        }
+    }
+
+    private async Task SyncSocialLinksAsync(long memberId, List<MemberSocialLinkItem> items, string actor, bool replaceMissing)
+    {
+        var existing = await _db.MemberSocialLinks
+            .Where(s => s.FK_Members == memberId && !s.IsCancelled)
+            .ToListAsync();
+
+        foreach (var item in items)
+        {
+            if (item.Id.HasValue)
+            {
+                var row = existing.FirstOrDefault(s => s.ID_MemberSocialLinks == item.Id.Value)
+                    ?? throw new NotFoundException("Social link not found.");
+                row.Platform = item.Platform;
+                row.Url = item.Url;
+                row.Username = item.Username;
+                row.UpdatedBy = actor;
+                row.UpdatedOn = DateTime.UtcNow;
+            }
+            else
+            {
+                _db.MemberSocialLinks.Add(new MemberSocialLink
+                {
+                    FK_Members = memberId,
+                    Platform = item.Platform,
+                    Url = item.Url,
+                    Username = item.Username,
+                    CreatedBy = actor,
+                    CreatedOn = DateTime.UtcNow
+                });
+            }
+        }
+
+        if (replaceMissing)
+        {
+            var keep = items.Where(i => i.Id.HasValue).Select(i => i.Id!.Value).ToHashSet();
+            foreach (var row in existing.Where(s => !keep.Contains(s.ID_MemberSocialLinks)))
+            {
+                SoftCancel(row, actor);
+            }
+        }
+    }
+
+    private static void SoftCancel(AuditableEntity entity, string actor)
+    {
+        entity.IsCancelled = true;
+        entity.CancelledBy = actor;
+        entity.CancelledOn = DateTime.UtcNow;
+    }
+
+    private async Task<Member?> LoadProfileEntityAsync(long familyId, long memberId)
+    {
+        return await _db.Members
+            .Where(m => m.ID_Members == memberId && m.FK_Families == familyId && !m.IsCancelled)
+            .Include(m => m.Addresses.Where(a => !a.IsCancelled))
+            .Include(m => m.Images.Where(i => !i.IsCancelled))
+            .Include(m => m.Events.Where(e => !e.IsCancelled))
+            .Include(m => m.SocialLinks.Where(s => !s.IsCancelled))
+            .Include(m => m.Notes.Where(n => !n.IsCancelled))
+            .Include(m => m.Parent)
+            .Include(m => m.Spouse)
+            .Include(m => m.Children.Where(c => !c.IsCancelled))
+            .FirstOrDefaultAsync();
     }
 
     private async Task LoadSpouseDetailsAsync(Member member)
@@ -258,45 +687,186 @@ public class MembersRepository : IMembersRepository
             return;
         }
 
-        await _db.Entry(member)
-            .Reference(m => m.Spouse)
-            .Query()
-            .Where(spouse => !spouse.IsCancelled)
-            .Include(spouse => spouse.Images.Where(image => !image.IsCancelled))
-            .Include(spouse => spouse.Events.Where(memberEvent => !memberEvent.IsCancelled))
-            .Include(spouse => spouse.Notes.Where(note => !note.IsCancelled))
-            .Include(spouse => spouse.SocialLinks.Where(link => !link.IsCancelled))
-            .LoadAsync();
+        member.Spouse = await _db.Members
+            .Where(m => m.ID_Members == member.FK_Members_Spouse && !m.IsCancelled)
+            .Include(m => m.Images.Where(i => !i.IsCancelled))
+            .FirstOrDefaultAsync();
     }
 
-    private async Task LoadChildrenRecursiveAsync(Member member)
+    private async Task LoadChildrenRecursiveAsync(Member parent)
     {
-        await _db.Entry(member)
-            .Collection(m => m.Children)
-            .Query()
-            .Where(child => !child.IsCancelled)
-            .Include(child => child.Images.Where(image => !image.IsCancelled))
-            .Include(child => child.Events.Where(memberEvent => !memberEvent.IsCancelled))
-            .Include(child => child.Notes.Where(note => !note.IsCancelled))
-            .Include(child => child.SocialLinks.Where(link => !link.IsCancelled))
-            .OrderBy(child => child.DateOfBirth)
-            .ThenBy(child => child.FirstName)
-            .LoadAsync();
+        var children = await _db.Members
+            .Where(m => m.FK_Members_Parent == parent.ID_Members && !m.IsCancelled)
+            .Include(m => m.Images.Where(i => !i.IsCancelled))
+            .ToListAsync();
 
-        foreach (var child in member.Children.Where(child => !child.IsCancelled))
+        parent.Children = children;
+        foreach (var child in children)
         {
             await LoadSpouseDetailsAsync(child);
             await LoadChildrenRecursiveAsync(child);
         }
     }
 
-    private static Member MapToEntity(InputCreateMember input, string createdBy) => new()
+    private async Task<OutputMemberProfile> MapToProfileAsync(Member member)
     {
-        FK_Families = input.FK_Families,
-        FK_Members_Parent = input.FK_Members_Parent,
-        FK_Members_Spouse = input.FK_Members_Spouse,
-        FirstName = input.FirstName,
-        LastName = input.LastName,
+        string? Photo(Member? m) =>
+            m?.Images.Where(i => !i.IsCancelled).OrderByDescending(i => i.IsPrimary).ThenBy(i => i.SortOrder)
+                .Select(i => i.ImageUrl).FirstOrDefault();
+
+        MemberRelationSummary? Rel(Member? m) => m is null || m.IsCancelled
+            ? null
+            : new MemberRelationSummary
+            {
+                Id = m.ID_Members,
+                FirstName = m.FirstName,
+                LastName = m.LastName,
+                FullName = $"{m.FirstName} {m.LastName}",
+                Gender = m.Gender,
+                DateOfBirth = m.DateOfBirth,
+                PhotoUrl = Photo(m)
+            };
+
+        if (member.Parent is null && member.FK_Members_Parent.HasValue)
+        {
+            member.Parent = await _db.Members
+                .Include(m => m.Images.Where(i => !i.IsCancelled))
+                .FirstOrDefaultAsync(m => m.ID_Members == member.FK_Members_Parent);
+        }
+
+        if (member.Spouse is null && member.FK_Members_Spouse.HasValue)
+        {
+            member.Spouse = await _db.Members
+                .Include(m => m.Images.Where(i => !i.IsCancelled))
+                .FirstOrDefaultAsync(m => m.ID_Members == member.FK_Members_Spouse);
+        }
+
+        var children = member.Children.Count > 0
+            ? member.Children.Where(c => !c.IsCancelled).ToList()
+            : await _db.Members
+                .Where(c => c.FK_Members_Parent == member.ID_Members && !c.IsCancelled)
+                .Include(c => c.Images.Where(i => !i.IsCancelled))
+                .ToListAsync();
+
+        return new OutputMemberProfile
+        {
+            Id = member.ID_Members,
+            FirstName = member.FirstName,
+            LastName = member.LastName,
+            FullName = $"{member.FirstName} {member.LastName}",
+            Email = member.Email,
+            Phone = member.Phone,
+            Gender = member.Gender,
+            DateOfBirth = member.DateOfBirth,
+            DateOfDeath = member.DateOfDeath,
+            IsRoot = member.IsRoot,
+            Biography = member.Biography,
+            Profession = member.Profession,
+            Parent = Rel(member.Parent),
+            Spouse = Rel(member.Spouse),
+            Children = children.Select(c => Rel(c)!).ToList(),
+            Addresses = member.Addresses.Select(a => new MemberAddressItem
+            {
+                Id = a.ID_MemberAddresses,
+                AddressLine1 = a.AddressLine1,
+                AddressLine2 = a.AddressLine2,
+                City = a.City,
+                State = a.State,
+                Country = a.Country,
+                PostalCode = a.PostalCode,
+                IsPrimary = a.IsPrimary
+            }).ToList(),
+            Images = member.Images.OrderBy(i => i.SortOrder).Select(i => new MemberImageItem
+            {
+                Id = i.ID_MemberImages,
+                ImageUrl = i.ImageUrl,
+                Caption = i.Caption,
+                IsPrimary = i.IsPrimary,
+                SortOrder = i.SortOrder
+            }).ToList(),
+            Events = member.Events.OrderByDescending(e => e.EventDate).Select(e => new MemberEventItem
+            {
+                Id = e.ID_MemberEvents,
+                EventType = e.EventType,
+                Title = e.Title,
+                Description = e.Description,
+                EventDate = e.EventDate
+            }).ToList(),
+            Notes = member.Notes.Select(n => new MemberNoteItem
+            {
+                Id = n.ID_MemberNotes,
+                Title = n.Title,
+                Content = n.Content
+            }).ToList(),
+            SocialLinks = member.SocialLinks.Select(s => new MemberSocialLinkItem
+            {
+                Id = s.ID_MemberSocialLinks,
+                Platform = s.Platform,
+                Url = s.Url,
+                Username = s.Username
+            }).ToList()
+        };
+    }
+
+    private static OutputMemberListItem MapToListItem(Member m) => new()
+    {
+        Id = m.ID_Members,
+        FirstName = m.FirstName,
+        LastName = m.LastName,
+        FullName = $"{m.FirstName} {m.LastName}",
+        Gender = m.Gender,
+        DateOfBirth = m.DateOfBirth,
+        IsRoot = m.IsRoot,
+        Profession = m.Profession,
+        PhotoUrl = m.Images.Where(i => !i.IsCancelled)
+            .OrderByDescending(i => i.IsPrimary)
+            .ThenBy(i => i.SortOrder)
+            .Select(i => i.ImageUrl)
+            .FirstOrDefault()
+    };
+
+    private static OutputTreeNode MapToTreeNode(Member m) => new()
+    {
+        Id = m.ID_Members,
+        FirstName = m.FirstName,
+        LastName = m.LastName,
+        FullName = $"{m.FirstName} {m.LastName}",
+        Gender = m.Gender,
+        DateOfBirth = m.DateOfBirth,
+        DateOfDeath = m.DateOfDeath,
+        IsRoot = m.IsRoot,
+        PhotoUrl = m.Images.Where(i => !i.IsCancelled)
+            .OrderByDescending(i => i.IsPrimary)
+            .ThenBy(i => i.SortOrder)
+            .Select(i => i.ImageUrl)
+            .FirstOrDefault(),
+        Spouse = m.Spouse is null || m.Spouse.IsCancelled ? null : MapToTreeNodeFlat(m.Spouse),
+        Children = m.Children.Where(c => !c.IsCancelled).Select(MapToTreeNode).ToList()
+    };
+
+    private static OutputTreeNode MapToTreeNodeFlat(Member m) => new()
+    {
+        Id = m.ID_Members,
+        FirstName = m.FirstName,
+        LastName = m.LastName,
+        FullName = $"{m.FirstName} {m.LastName}",
+        Gender = m.Gender,
+        DateOfBirth = m.DateOfBirth,
+        DateOfDeath = m.DateOfDeath,
+        IsRoot = m.IsRoot,
+        PhotoUrl = m.Images.Where(i => !i.IsCancelled)
+            .OrderByDescending(i => i.IsPrimary)
+            .ThenBy(i => i.SortOrder)
+            .Select(i => i.ImageUrl)
+            .FirstOrDefault()
+    };
+
+    private static Member MapToEntity(long familyId, InputSaveMember input, string createdBy) => new()
+    {
+        FK_Families = familyId,
+        FK_Members_Parent = input.ParentId,
+        FirstName = input.FirstName.Trim(),
+        LastName = input.LastName.Trim(),
         Email = input.Email,
         Phone = input.Phone,
         Gender = input.Gender,
@@ -309,144 +879,20 @@ public class MembersRepository : IMembersRepository
         CreatedOn = DateTime.UtcNow
     };
 
-    private static OutputGetMember MapToOutput(Member member) => new()
+    private static void ApplyBasicFields(Member existing, InputSaveMember input, string updatedBy)
     {
-        ID_Members = member.ID_Members,
-        FK_Families = member.FK_Families,
-        FK_Members_Parent = member.FK_Members_Parent,
-        FK_Members_Spouse = member.FK_Members_Spouse,
-        FirstName = member.FirstName,
-        LastName = member.LastName,
-        FullName = $"{member.FirstName} {member.LastName}".Trim(),
-        Email = member.Email,
-        Phone = member.Phone,
-        Gender = member.Gender,
-        DateOfBirth = member.DateOfBirth,
-        DateOfDeath = member.DateOfDeath,
-        IsRoot = member.IsRoot,
-        Biography = member.Biography,
-        Profession = member.Profession
-    };
-
-    private static OutputGetMemberProfile MapToProfileOutput(Member member)
-    {
-        var output = new OutputGetMemberProfile();
-        CopyMemberFields(member, output);
-        output.Addresses = member.Addresses.Where(address => !address.IsCancelled).Select(MapToAddressOutput).ToList();
-        output.Images = member.Images.Where(image => !image.IsCancelled).Select(MapToImageOutput).ToList();
-        output.Events = member.Events.Where(memberEvent => !memberEvent.IsCancelled).Select(MapToEventOutput).ToList();
-        output.SocialLinks = member.SocialLinks.Where(link => !link.IsCancelled).Select(MapToSocialLinkOutput).ToList();
-        output.Notes = member.Notes.Where(note => !note.IsCancelled).Select(MapToNoteOutput).ToList();
-        return output;
+        existing.FK_Members_Parent = input.ParentId;
+        existing.FirstName = input.FirstName.Trim();
+        existing.LastName = input.LastName.Trim();
+        existing.Email = input.Email;
+        existing.Phone = input.Phone;
+        existing.Gender = input.Gender;
+        existing.DateOfBirth = input.DateOfBirth;
+        existing.DateOfDeath = input.DateOfDeath;
+        existing.IsRoot = input.IsRoot;
+        existing.Biography = input.Biography;
+        existing.Profession = input.Profession;
+        existing.UpdatedBy = updatedBy;
+        existing.UpdatedOn = DateTime.UtcNow;
     }
-
-    private static OutputGetMemberTree MapToTreeOutput(Member member, bool includeSpouse = true, bool includeChildren = true)
-    {
-        var output = new OutputGetMemberTree
-        {
-            ID_Members = member.ID_Members,
-            FK_Families = member.FK_Families,
-            FirstName = member.FirstName,
-            LastName = member.LastName,
-            FullName = $"{member.FirstName} {member.LastName}".Trim(),
-            Email = member.Email,
-            Phone = member.Phone,
-            Gender = member.Gender,
-            DateOfBirth = member.DateOfBirth,
-            DateOfDeath = member.DateOfDeath,
-            IsRoot = member.IsRoot,
-            Biography = member.Biography,
-            Profession = member.Profession,
-            Images = member.Images.Where(image => !image.IsCancelled).Select(MapToImageOutput).ToList(),
-            SocialLinks = member.SocialLinks.Where(link => !link.IsCancelled).Select(MapToSocialLinkOutput).ToList(),
-            Events = member.Events.Where(memberEvent => !memberEvent.IsCancelled).Select(MapToEventOutput).ToList(),
-            Notes = member.Notes.Where(note => !note.IsCancelled).Select(MapToNoteOutput).ToList()
-        };
-
-        if (includeSpouse && member.Spouse is not null && !member.Spouse.IsCancelled)
-        {
-            output.Spouse = MapToTreeOutput(member.Spouse, includeSpouse: false, includeChildren: false);
-        }
-
-        if (includeChildren)
-        {
-            output.Children = member.Children
-                .Where(child => !child.IsCancelled)
-                .OrderBy(child => child.DateOfBirth)
-                .ThenBy(child => child.FirstName)
-                .Select(child => MapToTreeOutput(child))
-                .ToList();
-        }
-
-        return output;
-    }
-
-    private static void CopyMemberFields(Member member, OutputGetMember output)
-    {
-        output.ID_Members = member.ID_Members;
-        output.FK_Families = member.FK_Families;
-        output.FK_Members_Parent = member.FK_Members_Parent;
-        output.FK_Members_Spouse = member.FK_Members_Spouse;
-        output.FirstName = member.FirstName;
-        output.LastName = member.LastName;
-        output.FullName = $"{member.FirstName} {member.LastName}".Trim();
-        output.Email = member.Email;
-        output.Phone = member.Phone;
-        output.Gender = member.Gender;
-        output.DateOfBirth = member.DateOfBirth;
-        output.DateOfDeath = member.DateOfDeath;
-        output.IsRoot = member.IsRoot;
-        output.Biography = member.Biography;
-        output.Profession = member.Profession;
-    }
-
-    private static OutputGetMemberAddress MapToAddressOutput(MemberAddress address) => new()
-    {
-        ID_MemberAddresses = address.ID_MemberAddresses,
-        FK_Members = address.FK_Members,
-        AddressLine1 = address.AddressLine1,
-        AddressLine2 = address.AddressLine2,
-        City = address.City,
-        State = address.State,
-        Country = address.Country,
-        PostalCode = address.PostalCode,
-        IsPrimary = address.IsPrimary
-    };
-
-    private static OutputGetMemberImage MapToImageOutput(MemberImage image) => new()
-    {
-        ID_MemberImages = image.ID_MemberImages,
-        FK_Members = image.FK_Members,
-        ImageUrl = image.ImageUrl,
-        Caption = image.Caption,
-        IsPrimary = image.IsPrimary,
-        SortOrder = image.SortOrder
-    };
-
-    private static OutputGetMemberEvent MapToEventOutput(MemberEvent memberEvent) => new()
-    {
-        ID_MemberEvents = memberEvent.ID_MemberEvents,
-        FK_Members = memberEvent.FK_Members,
-        EventType = memberEvent.EventType,
-        Title = memberEvent.Title,
-        Description = memberEvent.Description,
-        EventDate = memberEvent.EventDate
-    };
-
-    private static OutputGetMemberNote MapToNoteOutput(MemberNote note) => new()
-    {
-        ID_MemberNotes = note.ID_MemberNotes,
-        FK_Members = note.FK_Members,
-        Title = note.Title,
-        Content = note.Content
-    };
-
-    private static OutputGetMemberSocialLink MapToSocialLinkOutput(MemberSocialLink link) => new()
-    {
-        ID_MemberSocialLinks = link.ID_MemberSocialLinks,
-        FK_Members = link.FK_Members,
-        Platform = link.Platform,
-        Url = link.Url,
-        Username = link.Username
-    };
 }

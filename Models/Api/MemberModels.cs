@@ -1,115 +1,10 @@
 namespace MidnightApi.Models.Api;
 
-using MidnightApi.Models.Api;
+// --- Nested profile parts (no FK_Members exposed to clients) ---
 
-public class InputSearchMembers
+public class MemberAddressItem
 {
-    public string Name { get; set; } = string.Empty;
-    public long? FamilyId { get; set; }
-}
-
-public class InputSearchMembersView
-{
-    public string Name { get; set; } = string.Empty;
-    public long? FamilyId { get; set; }
-}
-
-public class InputGetFamilyMembers
-{
-    public long FamilyId { get; set; }
-}
-
-public class InputGetMembersByGeneration
-{
-    public long FamilyId { get; set; }
-    public int Level { get; set; }
-}
-
-public class InputGetMemberTree
-{
-    public long FamilyId { get; set; }
-}
-
-public class InputCreateMember
-{
-    public long FK_Families { get; set; }
-    public long? FK_Members_Parent { get; set; }
-    public long? FK_Members_Spouse { get; set; }
-    public string FirstName { get; set; } = string.Empty;
-    public string LastName { get; set; } = string.Empty;
-    public string? Email { get; set; }
-    public string? Phone { get; set; }
-    public string? Gender { get; set; }
-    public DateOnly? DateOfBirth { get; set; }
-    public DateOnly? DateOfDeath { get; set; }
-    public bool IsRoot { get; set; }
-    public string? Biography { get; set; }
-    public string? Profession { get; set; }
-}
-
-public class InputUpdateMember
-{
-    public long? FK_Members_Parent { get; set; }
-    public long? FK_Members_Spouse { get; set; }
-    public string FirstName { get; set; } = string.Empty;
-    public string LastName { get; set; } = string.Empty;
-    public string? Email { get; set; }
-    public string? Phone { get; set; }
-    public string? Gender { get; set; }
-    public DateOnly? DateOfBirth { get; set; }
-    public DateOnly? DateOfDeath { get; set; }
-    public bool IsRoot { get; set; }
-    public string? Biography { get; set; }
-    public string? Profession { get; set; }
-}
-
-public class InputCreateMemberView
-{
-    public long FK_Families { get; set; }
-    public long? FK_Members_Parent { get; set; }
-    public long? FK_Members_Spouse { get; set; }
-    public string FirstName { get; set; } = string.Empty;
-    public string LastName { get; set; } = string.Empty;
-    public string? Email { get; set; }
-    public string? Phone { get; set; }
-    public string? Gender { get; set; }
-    public DateOnly? DateOfBirth { get; set; }
-    public DateOnly? DateOfDeath { get; set; }
-    public bool IsRoot { get; set; }
-    public string? Biography { get; set; }
-    public string? Profession { get; set; }
-}
-
-public class InputUpdateMemberView
-{
-    public long? FK_Members_Parent { get; set; }
-    public long? FK_Members_Spouse { get; set; }
-    public string FirstName { get; set; } = string.Empty;
-    public string LastName { get; set; } = string.Empty;
-    public string? Email { get; set; }
-    public string? Phone { get; set; }
-    public string? Gender { get; set; }
-    public DateOnly? DateOfBirth { get; set; }
-    public DateOnly? DateOfDeath { get; set; }
-    public bool IsRoot { get; set; }
-    public string? Biography { get; set; }
-    public string? Profession { get; set; }
-}
-
-public class InputAddSpouseView
-{
-    public long? ExistingSpouseId { get; set; }
-    public InputCreateMemberView? NewSpouse { get; set; }
-}
-
-public class InputAddChildView
-{
-    public InputCreateMemberView Child { get; set; } = new();
-}
-
-public class InputCreateMemberAddress
-{
-    public long FK_Members { get; set; }
+    public long? Id { get; set; }
     public string AddressLine1 { get; set; } = string.Empty;
     public string? AddressLine2 { get; set; }
     public string City { get; set; } = string.Empty;
@@ -119,170 +14,89 @@ public class InputCreateMemberAddress
     public bool IsPrimary { get; set; }
 }
 
-public class InputUpdateMemberAddress
+public class MemberImageItem
 {
-    public string AddressLine1 { get; set; } = string.Empty;
-    public string? AddressLine2 { get; set; }
-    public string City { get; set; } = string.Empty;
-    public string? State { get; set; }
-    public string Country { get; set; } = string.Empty;
-    public string? PostalCode { get; set; }
-    public bool IsPrimary { get; set; }
-}
-
-public class InputCreateMemberAddressView
-{
-    public long FK_Members { get; set; }
-    public string AddressLine1 { get; set; } = string.Empty;
-    public string? AddressLine2 { get; set; }
-    public string City { get; set; } = string.Empty;
-    public string? State { get; set; }
-    public string Country { get; set; } = string.Empty;
-    public string? PostalCode { get; set; }
-    public bool IsPrimary { get; set; }
-}
-
-public class InputUpdateMemberAddressView
-{
-    public string AddressLine1 { get; set; } = string.Empty;
-    public string? AddressLine2 { get; set; }
-    public string City { get; set; } = string.Empty;
-    public string? State { get; set; }
-    public string Country { get; set; } = string.Empty;
-    public string? PostalCode { get; set; }
-    public bool IsPrimary { get; set; }
-}
-
-public class InputCreateMemberImage
-{
-    public long FK_Members { get; set; }
+    public long? Id { get; set; }
     public string ImageUrl { get; set; } = string.Empty;
     public string? Caption { get; set; }
     public bool IsPrimary { get; set; }
     public int SortOrder { get; set; }
 }
 
-public class InputUpdateMemberImage
+public class MemberEventItem
 {
-    public string ImageUrl { get; set; } = string.Empty;
-    public string? Caption { get; set; }
-    public bool IsPrimary { get; set; }
-    public int SortOrder { get; set; }
-}
-
-public class InputCreateMemberImageView
-{
-    public long FK_Members { get; set; }
-    public string ImageUrl { get; set; } = string.Empty;
-    public string? Caption { get; set; }
-    public bool IsPrimary { get; set; }
-    public int SortOrder { get; set; }
-}
-
-public class InputUpdateMemberImageView
-{
-    public string ImageUrl { get; set; } = string.Empty;
-    public string? Caption { get; set; }
-    public bool IsPrimary { get; set; }
-    public int SortOrder { get; set; }
-}
-
-public class InputCreateMemberEvent
-{
-    public long FK_Members { get; set; }
+    public long? Id { get; set; }
     public string EventType { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public DateOnly EventDate { get; set; }
 }
 
-public class InputUpdateMemberEvent
+public class MemberNoteItem
 {
-    public string EventType { get; set; } = string.Empty;
-    public string Title { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public DateOnly EventDate { get; set; }
-}
-
-public class InputCreateMemberEventView
-{
-    public long FK_Members { get; set; }
-    public string EventType { get; set; } = string.Empty;
-    public string Title { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public DateOnly EventDate { get; set; }
-}
-
-public class InputUpdateMemberEventView
-{
-    public string EventType { get; set; } = string.Empty;
-    public string Title { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public DateOnly EventDate { get; set; }
-}
-
-public class InputCreateMemberNote
-{
-    public long FK_Members { get; set; }
+    public long? Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
 }
 
-public class InputUpdateMemberNote
+public class MemberSocialLinkItem
 {
-    public string Title { get; set; } = string.Empty;
-    public string Content { get; set; } = string.Empty;
-}
-
-public class InputCreateMemberNoteView
-{
-    public long FK_Members { get; set; }
-    public string Title { get; set; } = string.Empty;
-    public string Content { get; set; } = string.Empty;
-}
-
-public class InputUpdateMemberNoteView
-{
-    public string Title { get; set; } = string.Empty;
-    public string Content { get; set; } = string.Empty;
-}
-
-public class InputCreateMemberSocialLink
-{
-    public long FK_Members { get; set; }
+    public long? Id { get; set; }
     public string Platform { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;
     public string? Username { get; set; }
 }
 
-public class InputUpdateMemberSocialLink
+public class MemberRelationSummary
 {
-    public string Platform { get; set; } = string.Empty;
-    public string Url { get; set; } = string.Empty;
-    public string? Username { get; set; }
+    public long Id { get; set; }
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+    public string? Gender { get; set; }
+    public DateOnly? DateOfBirth { get; set; }
+    public string? PhotoUrl { get; set; }
 }
 
-public class InputCreateMemberSocialLinkView
+// --- List / query ---
+
+public class InputMemberListQuery
 {
-    public long FK_Members { get; set; }
-    public string Platform { get; set; } = string.Empty;
-    public string Url { get; set; } = string.Empty;
-    public string? Username { get; set; }
+    public string? Search { get; set; }
+    public string? Gender { get; set; }
+    public string? SortBy { get; set; }
+    public bool SortDesc { get; set; }
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
 }
 
-public class InputUpdateMemberSocialLinkView
+public class OutputMemberListItem
 {
-    public string Platform { get; set; } = string.Empty;
-    public string Url { get; set; } = string.Empty;
-    public string? Username { get; set; }
+    public long Id { get; set; }
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+    public string? Gender { get; set; }
+    public DateOnly? DateOfBirth { get; set; }
+    public bool IsRoot { get; set; }
+    public string? Profession { get; set; }
+    public string? PhotoUrl { get; set; }
 }
 
-public class OutputGetMember
+public class OutputPagedMembers
 {
-    public long ID_Members { get; set; }
-    public long FK_Families { get; set; }
-    public long? FK_Members_Parent { get; set; }
-    public long? FK_Members_Spouse { get; set; }
+    public List<OutputMemberListItem> Items { get; set; } = [];
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalCount { get; set; }
+    public int TotalPages { get; set; }
+}
+
+// --- Detail / create / update ---
+
+public class OutputMemberProfile
+{
+    public long Id { get; set; }
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
@@ -294,24 +108,20 @@ public class OutputGetMember
     public bool IsRoot { get; set; }
     public string? Biography { get; set; }
     public string? Profession { get; set; }
+    public MemberRelationSummary? Parent { get; set; }
+    public MemberRelationSummary? Spouse { get; set; }
+    public List<MemberRelationSummary> Children { get; set; } = [];
+    public List<MemberAddressItem> Addresses { get; set; } = [];
+    public List<MemberImageItem> Images { get; set; } = [];
+    public List<MemberEventItem> Events { get; set; } = [];
+    public List<MemberNoteItem> Notes { get; set; } = [];
+    public List<MemberSocialLinkItem> SocialLinks { get; set; } = [];
 }
 
-public class OutputGetMemberProfile : OutputGetMember
+public class InputSaveMember
 {
-    public List<OutputGetMemberAddress> Addresses { get; set; } = [];
-    public List<OutputGetMemberImage> Images { get; set; } = [];
-    public List<OutputGetMemberEvent> Events { get; set; } = [];
-    public List<OutputGetMemberSocialLink> SocialLinks { get; set; } = [];
-    public List<OutputGetMemberNote> Notes { get; set; } = [];
-}
-
-public class OutputGetMemberTree
-{
-    public long ID_Members { get; set; }
-    public long FK_Families { get; set; }
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
-    public string FullName { get; set; } = string.Empty;
     public string? Email { get; set; }
     public string? Phone { get; set; }
     public string? Gender { get; set; }
@@ -320,60 +130,91 @@ public class OutputGetMemberTree
     public bool IsRoot { get; set; }
     public string? Biography { get; set; }
     public string? Profession { get; set; }
-    public OutputGetMemberTree? Spouse { get; set; }
-    public List<OutputGetMemberTree> Children { get; set; } = [];
-    public List<OutputGetMemberImage> Images { get; set; } = [];
-    public List<OutputGetMemberSocialLink> SocialLinks { get; set; } = [];
-    public List<OutputGetMemberEvent> Events { get; set; } = [];
-    public List<OutputGetMemberNote> Notes { get; set; } = [];
+    public long? ParentId { get; set; }
+    public long? SpouseId { get; set; }
+    public List<MemberAddressItem>? Addresses { get; set; }
+    public List<MemberImageItem>? Images { get; set; }
+    public List<MemberEventItem>? Events { get; set; }
+    public List<MemberNoteItem>? Notes { get; set; }
+    public List<MemberSocialLinkItem>? SocialLinks { get; set; }
 }
 
-public class OutputGetMemberAddress
+public class InputAddChild
 {
-    public long ID_MemberAddresses { get; set; }
-    public long FK_Members { get; set; }
-    public string AddressLine1 { get; set; } = string.Empty;
-    public string? AddressLine2 { get; set; }
-    public string City { get; set; } = string.Empty;
-    public string? State { get; set; }
-    public string Country { get; set; } = string.Empty;
-    public string? PostalCode { get; set; }
-    public bool IsPrimary { get; set; }
+    public InputSaveMember Child { get; set; } = new();
 }
 
-public class OutputGetMemberImage
+public class InputAddSpouse
 {
-    public long ID_MemberImages { get; set; }
-    public long FK_Members { get; set; }
-    public string ImageUrl { get; set; } = string.Empty;
-    public string? Caption { get; set; }
-    public bool IsPrimary { get; set; }
-    public int SortOrder { get; set; }
+    public InputSaveMember Spouse { get; set; } = new();
 }
 
-public class OutputGetMemberEvent
+public class InputMapSpouse
 {
-    public long ID_MemberEvents { get; set; }
-    public long FK_Members { get; set; }
+    public long MemberId { get; set; }
+    public long SpouseId { get; set; }
+}
+
+// --- Tree ---
+
+public class OutputTreeNode
+{
+    public long Id { get; set; }
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+    public string? Gender { get; set; }
+    public DateOnly? DateOfBirth { get; set; }
+    public DateOnly? DateOfDeath { get; set; }
+    public bool IsRoot { get; set; }
+    public string? PhotoUrl { get; set; }
+    public OutputTreeNode? Spouse { get; set; }
+    public List<OutputTreeNode> Children { get; set; } = [];
+}
+
+public class OutputFamilyTree
+{
+    public OutputTreeNode? Root { get; set; }
+    public int TotalMembers { get; set; }
+}
+
+// --- Dashboard / Timeline ---
+
+public class OutputDashboard
+{
+    public OutputGetFamily Family { get; set; } = null!;
+    public int TotalMembers { get; set; }
+    public int TotalGenerations { get; set; }
+    public List<OutputMemberListItem> RecentMembers { get; set; } = [];
+    public List<OutputUpcomingBirthday> UpcomingBirthdays { get; set; } = [];
+    public OutputDashboardStats Stats { get; set; } = new();
+}
+
+public class OutputDashboardStats
+{
+    public int MaleCount { get; set; }
+    public int FemaleCount { get; set; }
+    public int OtherGenderCount { get; set; }
+    public int LivingCount { get; set; }
+    public int DeceasedCount { get; set; }
+}
+
+public class OutputUpcomingBirthday
+{
+    public long MemberId { get; set; }
+    public string FullName { get; set; } = string.Empty;
+    public DateOnly DateOfBirth { get; set; }
+    public int TurningAge { get; set; }
+    public int DaysUntil { get; set; }
+}
+
+public class OutputTimelineItem
+{
+    public long EventId { get; set; }
+    public long MemberId { get; set; }
+    public string MemberName { get; set; } = string.Empty;
     public string EventType { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public DateOnly EventDate { get; set; }
-}
-
-public class OutputGetMemberNote
-{
-    public long ID_MemberNotes { get; set; }
-    public long FK_Members { get; set; }
-    public string Title { get; set; } = string.Empty;
-    public string Content { get; set; } = string.Empty;
-}
-
-public class OutputGetMemberSocialLink
-{
-    public long ID_MemberSocialLinks { get; set; }
-    public long FK_Members { get; set; }
-    public string Platform { get; set; } = string.Empty;
-    public string Url { get; set; } = string.Empty;
-    public string? Username { get; set; }
 }

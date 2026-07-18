@@ -24,14 +24,6 @@ public class UserAccountsRepository : IUserAccountsRepository
         return account is null ? null : MapToOutput(account);
     }
 
-    public async Task<OutputGetAccount?> GetByFamilyIdAsync(long familyId)
-    {
-        var account = await _db.UserAccounts
-            .FirstOrDefaultAsync(a => a.FK_Families == familyId && !a.IsCancelled);
-
-        return account is null ? null : MapToOutput(account);
-    }
-
     public async Task<(OutputGetAccount Account, string PasswordHash)?> GetLoginByUsernameAsync(string username)
     {
         var account = await _db.UserAccounts
@@ -81,23 +73,6 @@ public class UserAccountsRepository : IUserAccountsRepository
         return MapToOutput(existing);
     }
 
-    public async Task<bool> SoftDeleteAsync(long id, string deletedBy)
-    {
-        var existing = await _db.UserAccounts
-            .FirstOrDefaultAsync(a => a.ID_UserAccounts == id && !a.IsCancelled);
-        if (existing is null)
-        {
-            return false;
-        }
-
-        existing.IsCancelled = true;
-        existing.CancelledBy = deletedBy;
-        existing.CancelledOn = DateTime.UtcNow;
-
-        await _db.SaveChangesAsync();
-        return true;
-    }
-
     public async Task<bool> ExistsByUsernameAsync(string username, long? excludeId = null)
     {
         var query = _db.UserAccounts
@@ -109,12 +84,6 @@ public class UserAccountsRepository : IUserAccountsRepository
         }
 
         return await query.AnyAsync();
-    }
-
-    public async Task<bool> ExistsByFamilyIdAsync(long familyId)
-    {
-        return await _db.UserAccounts
-            .AnyAsync(a => a.FK_Families == familyId && !a.IsCancelled);
     }
 
     private static OutputGetAccount MapToOutput(UserAccount account) => new()
