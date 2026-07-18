@@ -25,7 +25,8 @@ public sealed class MatchRegexAttribute : ValidationAttribute
             return ValidationResult.Success;
         }
 
-        var message = ErrorMessage ?? $"{validationContext.DisplayName} format is invalid.";
+        var displayName = ValidationDisplayNameHelper.Resolve(validationContext);
+        var message = ErrorMessage ?? $"{displayName} format is invalid.";
         return new ValidationResult(message);
     }
 }

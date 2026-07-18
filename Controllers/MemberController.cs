@@ -76,7 +76,7 @@ public class MemberController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] InputSaveMember request)
+    public async Task<IActionResult> Create([FromBody] InputCreateMember request)
     {
         _commonService.ValidateModelState(ModelState);
 
@@ -93,7 +93,7 @@ public class MemberController : ControllerBase
     }
 
     [HttpPut("{id:long}")]
-    public async Task<IActionResult> Update([FromRoute] InputMemberRouteRequest route, [FromBody] InputSaveMember request)
+    public async Task<IActionResult> Update([FromRoute] InputMemberRouteRequest route, [FromBody] InputUpdateMember request)
     {
         _commonService.ValidateModelState(ModelState);
 

@@ -20,7 +20,8 @@ public sealed class PhoneNumberAttribute : ValidationAttribute
             return ValidationResult.Success;
         }
 
-        var message = ErrorMessage ?? $"{validationContext.DisplayName} is not a valid phone number.";
+        var displayName = ValidationDisplayNameHelper.Resolve(validationContext);
+        var message = ErrorMessage ?? $"{displayName} is not a valid phone number.";
         return new ValidationResult(message);
     }
 }

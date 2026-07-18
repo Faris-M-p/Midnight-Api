@@ -29,7 +29,8 @@ public sealed class GreaterThanZeroAttribute : ValidationAttribute
             return ValidationResult.Success;
         }
 
-        var message = ErrorMessage ?? $"{validationContext.DisplayName} must be greater than zero.";
+        var displayName = ValidationDisplayNameHelper.Resolve(validationContext);
+        var message = ErrorMessage ?? $"{displayName} must be greater than zero.";
         return new ValidationResult(message);
     }
 }

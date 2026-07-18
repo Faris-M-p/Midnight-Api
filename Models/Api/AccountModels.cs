@@ -5,23 +5,28 @@ namespace MidnightApi.Models.Api;
 
 public class InputRegisterAccountView
 {
+    [Display(Name = "Username")]
     [Required, MinLength(3), StringLength(100)]
     [TrimmedString]
     [NoScriptTags]
     public string Username { get; set; } = string.Empty;
 
+    [Display(Name = "Email")]
     [Required, EmailAddress, StringLength(256)]
     [TrimmedString]
     public string Email { get; set; } = string.Empty;
 
+    [Display(Name = "Password")]
     [Required, MinLength(6), StringLength(100)]
     public string Password { get; set; } = string.Empty;
 
+    [Display(Name = "Family Code")]
     [Required, StringLength(50)]
     [TrimmedString]
     [NoScriptTags]
     public string FamilyCode { get; set; } = string.Empty;
 
+    [Display(Name = "Family Name")]
     [Required, StringLength(200)]
     [TrimmedString]
     [NoScriptTags]
@@ -34,21 +39,25 @@ public class InputRegisterAccountView
 
 public class InputLoginView
 {
+    [Display(Name = "Username")]
     [Required, MinLength(3), StringLength(100)]
     [TrimmedString]
     public string Username { get; set; } = string.Empty;
 
+    [Display(Name = "Password")]
     [Required, MinLength(6), StringLength(100)]
     public string Password { get; set; } = string.Empty;
 }
 
 public class InputUpdateAccountView
 {
+    [Display(Name = "Username")]
     [Required, MinLength(3), StringLength(100)]
     [TrimmedString]
     [NoScriptTags]
     public string Username { get; set; } = string.Empty;
 
+    [Display(Name = "Email")]
     [Required, EmailAddress, StringLength(256)]
     [TrimmedString]
     public string Email { get; set; } = string.Empty;

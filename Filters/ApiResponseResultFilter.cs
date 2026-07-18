@@ -69,7 +69,7 @@ public class ApiResponseResultFilter : IAsyncResultFilter
             .MakeGenericType(data.GetType())
             .GetMethod(nameof(ApiResponse<object>.Ok), BindingFlags.Public | BindingFlags.Static);
 
-        return method!.Invoke(null, [data, "Success", statusCode, traceId])!;
+        return method!.Invoke(null, [data, "Success", statusCode, traceId, string.Empty])!;
     }
 
     private static string? ExtractMessage(object value)

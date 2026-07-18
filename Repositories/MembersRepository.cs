@@ -81,7 +81,7 @@ public class MembersRepository : IMembersRepository
         return member is null ? null : await _manager.MapToProfileAsync(member);
     }
 
-    public async Task<OutputMemberProfile> CreateAsync(long familyId, InputSaveMember input, string createdBy)
+    public async Task<OutputMemberProfile> CreateAsync(long familyId, InputCreateMember input, string createdBy)
     {
         await ValidateSaveBusinessAsync(familyId, input, memberId: null);
 
@@ -89,6 +89,7 @@ public class MembersRepository : IMembersRepository
         try
         {
             var member = await _manager.CreateMemberAsync(familyId, input, createdBy);
+            await _db.SaveChangesAsync();
 
             await _manager.SaveAddressesAsync(member.ID_Members, input.Addresses, createdBy);
             await _manager.SaveImagesAsync(member.ID_Members, input.Images, createdBy);
@@ -109,7 +110,7 @@ public class MembersRepository : IMembersRepository
         }
     }
 
-    public async Task<OutputMemberProfile?> UpdateAsync(long familyId, long memberId, InputSaveMember input, string updatedBy)
+    public async Task<OutputMemberProfile?> UpdateAsync(long familyId, long memberId, InputUpdateMember input, string updatedBy)
     {
         await using var tx = await _db.Database.BeginTransactionAsync();
         try
@@ -169,7 +170,7 @@ public class MembersRepository : IMembersRepository
         return true;
     }
 
-    public async Task<OutputMemberProfile> AddChildAsync(long familyId, long parentId, InputSaveMember child, string createdBy)
+    public async Task<OutputMemberProfile> AddChildAsync(long familyId, long parentId, InputCreateMember child, string createdBy)
     {
         var parent = await _db.Members
             .FirstOrDefaultAsync(m => m.ID_Members == parentId && m.FK_Families == familyId && !m.IsCancelled)
@@ -180,7 +181,7 @@ public class MembersRepository : IMembersRepository
         return await CreateAsync(familyId, child, createdBy);
     }
 
-    public async Task<OutputMemberProfile> AddSpouseAsync(long familyId, long memberId, InputSaveMember spouseInput, string createdBy)
+    public async Task<OutputMemberProfile> AddSpouseAsync(long familyId, long memberId, InputCreateMember spouseInput, string createdBy)
     {
         var member = await _db.Members
             .FirstOrDefaultAsync(m => m.ID_Members == memberId && m.FK_Families == familyId && !m.IsCancelled)
@@ -203,7 +204,11 @@ public class MembersRepository : IMembersRepository
             _db.Members.Add(spouse);
             await _db.SaveChangesAsync();
 
-            await _manager.SyncNestedAsync(spouse.ID_Members, spouseInput, createdBy, replaceMissing: false);
+            await _manager.SaveAddressesAsync(spouse.ID_Members, spouseInput.Addresses, createdBy);
+            await _manager.SaveImagesAsync(spouse.ID_Members, spouseInput.Images, createdBy);
+            await _manager.SaveEventsAsync(spouse.ID_Members, spouseInput.Events, createdBy);
+            await _manager.SaveNotesAsync(spouse.ID_Members, spouseInput.Notes, createdBy);
+            await _manager.SaveSocialLinksAsync(spouse.ID_Members, spouseInput.SocialLinks, createdBy);
 
             member.FK_Members_Spouse = spouse.ID_Members;
             spouse.FK_Members_Spouse = member.ID_Members;
@@ -402,7 +407,7 @@ public class MembersRepository : IMembersRepository
         return row is null ? null : (row.FK_Members_Parent, row.FK_Members_Spouse);
     }
 
-    private static OutputMemberProfile BuildCreateResponse(Member member, InputSaveMember input)
+    private static OutputMemberProfile BuildCreateResponse(Member member, InputCreateMember input)
     {
         return new OutputMemberProfile
         {
@@ -456,7 +461,7 @@ public class MembersRepository : IMembersRepository
         };
     }
 
-    private async Task ValidateSaveBusinessAsync(long familyId, InputSaveMember request, long? memberId)
+    private async Task ValidateSaveBusinessAsync(long familyId, InputMemberSaveBase request, long? memberId)
     {
         var selfError = _validation.ValidateSelfReference(memberId ?? 0, request.ParentId, request.SpouseId);
         if (selfError is not null)

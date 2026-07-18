@@ -29,7 +29,8 @@ public sealed class AllowedValuesAttribute : ValidationAttribute
 
         if (value is string)
         {
-            var message = ErrorMessage ?? $"{validationContext.DisplayName} must be one of: {string.Join(", ", _allowedValues)}.";
+            var displayName = ValidationDisplayNameHelper.Resolve(validationContext);
+            var message = ErrorMessage ?? $"{displayName} must be one of: {string.Join(", ", _allowedValues)}.";
             return new ValidationResult(message);
         }
 

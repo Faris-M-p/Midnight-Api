@@ -30,14 +30,14 @@ public class MembersRepositoryManager
             .FirstOrDefaultAsync();
     }
 
-    public Task<Member> CreateMemberAsync(long familyId, InputSaveMember input, string createdBy)
+    public Task<Member> CreateMemberAsync(long familyId, InputMemberSaveBase input, string createdBy)
     {
         var member = MapToEntity(familyId, input, createdBy);
         _db.Members.Add(member);
         return Task.FromResult(member);
     }
 
-    public Task SaveAddressesAsync(long memberId, List<MemberAddressItem>? addresses, string createdBy)
+    public Task SaveAddressesAsync(long memberId, List<InputCreateMemberAddress>? addresses, string createdBy)
     {
         if (addresses is null || addresses.Count == 0)
         {
@@ -62,7 +62,7 @@ public class MembersRepositoryManager
         return Task.CompletedTask;
     }
 
-    public Task SaveImagesAsync(long memberId, List<MemberImageItem>? images, string createdBy)
+    public Task SaveImagesAsync(long memberId, List<InputCreateMemberImage>? images, string createdBy)
     {
         if (images is null || images.Count == 0)
         {
@@ -84,7 +84,7 @@ public class MembersRepositoryManager
         return Task.CompletedTask;
     }
 
-    public Task SaveEventsAsync(long memberId, List<MemberEventItem>? events, string createdBy)
+    public Task SaveEventsAsync(long memberId, List<InputCreateMemberEvent>? events, string createdBy)
     {
         if (events is null || events.Count == 0)
         {
@@ -106,7 +106,7 @@ public class MembersRepositoryManager
         return Task.CompletedTask;
     }
 
-    public Task SaveNotesAsync(long memberId, List<MemberNoteItem>? notes, string createdBy)
+    public Task SaveNotesAsync(long memberId, List<InputCreateMemberNote>? notes, string createdBy)
     {
         if (notes is null || notes.Count == 0)
         {
@@ -126,7 +126,7 @@ public class MembersRepositoryManager
         return Task.CompletedTask;
     }
 
-    public Task SaveSocialLinksAsync(long memberId, List<MemberSocialLinkItem>? socialLinks, string createdBy)
+    public Task SaveSocialLinksAsync(long memberId, List<InputCreateMemberSocialLink>? socialLinks, string createdBy)
     {
         if (socialLinks is null || socialLinks.Count == 0)
         {
@@ -167,7 +167,7 @@ public class MembersRepositoryManager
         spouse.UpdatedOn = DateTime.UtcNow;
     }
 
-    public void ApplyBasicFields(Member existing, InputSaveMember input, string updatedBy)
+    public void ApplyBasicFields(Member existing, InputMemberSaveBase input, string updatedBy)
     {
         existing.FK_Members_Parent = input.ParentId;
         existing.FirstName = input.FirstName.Trim();
@@ -204,7 +204,7 @@ public class MembersRepositoryManager
         spouse.UpdatedOn = DateTime.UtcNow;
     }
 
-    public async Task SyncNestedAsync(long memberId, InputSaveMember input, string actor, bool replaceMissing)
+    public async Task SyncNestedAsync(long memberId, InputUpdateMember input, string actor, bool replaceMissing)
     {
         if (input.Addresses is not null)
         {
@@ -436,7 +436,7 @@ public class MembersRepositoryManager
         Children = m.Children.Where(c => !c.IsCancelled).Select(MapToTreeNode).ToList()
     };
 
-    public Member MapToEntity(long familyId, InputSaveMember input, string createdBy) => new()
+    public Member MapToEntity(long familyId, InputMemberSaveBase input, string createdBy) => new()
     {
         FK_Families = familyId,
         FK_Members_Parent = input.ParentId,
@@ -454,7 +454,7 @@ public class MembersRepositoryManager
         CreatedOn = DateTime.UtcNow
     };
 
-    private async Task SyncAddressesAsync(long memberId, List<MemberAddressItem> items, string actor, bool replaceMissing)
+    private async Task SyncAddressesAsync(long memberId, List<InputUpdateMemberAddress> items, string actor, bool replaceMissing)
     {
         var existing = await _db.MemberAddresses
             .Where(a => a.FK_Members == memberId && !a.IsCancelled)
@@ -504,7 +504,7 @@ public class MembersRepositoryManager
         }
     }
 
-    private async Task SyncImagesAsync(long memberId, List<MemberImageItem> items, string actor, bool replaceMissing)
+    private async Task SyncImagesAsync(long memberId, List<InputUpdateMemberImage> items, string actor, bool replaceMissing)
     {
         var existing = await _db.MemberImages
             .Where(i => i.FK_Members == memberId && !i.IsCancelled)
@@ -548,7 +548,7 @@ public class MembersRepositoryManager
         }
     }
 
-    private async Task SyncEventsAsync(long memberId, List<MemberEventItem> items, string actor, bool replaceMissing)
+    private async Task SyncEventsAsync(long memberId, List<InputUpdateMemberEvent> items, string actor, bool replaceMissing)
     {
         var existing = await _db.MemberEvents
             .Where(e => e.FK_Members == memberId && !e.IsCancelled)
@@ -592,7 +592,7 @@ public class MembersRepositoryManager
         }
     }
 
-    private async Task SyncNotesAsync(long memberId, List<MemberNoteItem> items, string actor, bool replaceMissing)
+    private async Task SyncNotesAsync(long memberId, List<InputUpdateMemberNote> items, string actor, bool replaceMissing)
     {
         var existing = await _db.MemberNotes
             .Where(n => n.FK_Members == memberId && !n.IsCancelled)
@@ -632,7 +632,7 @@ public class MembersRepositoryManager
         }
     }
 
-    private async Task SyncSocialLinksAsync(long memberId, List<MemberSocialLinkItem> items, string actor, bool replaceMissing)
+    private async Task SyncSocialLinksAsync(long memberId, List<InputUpdateMemberSocialLink> items, string actor, bool replaceMissing)
     {
         var existing = await _db.MemberSocialLinks
             .Where(s => s.FK_Members == memberId && !s.IsCancelled)

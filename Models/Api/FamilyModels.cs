@@ -5,6 +5,7 @@ namespace MidnightApi.Models.Api;
 
 public class InputUpdateFamily
 {
+    [Display(Name = "Family Name")]
     [Required, StringLength(200)]
     [TrimmedString]
     [NoScriptTags]
@@ -17,6 +18,7 @@ public class InputUpdateFamily
 
 public class InputUpdateFamilyView
 {
+    [Display(Name = "Family Name")]
     [Required, StringLength(200)]
     [TrimmedString]
     [NoScriptTags]
@@ -29,11 +31,13 @@ public class InputUpdateFamilyView
 
 public class InputCreateFamily
 {
+    [Display(Name = "Family Code")]
     [Required, StringLength(50)]
     [TrimmedString]
     [NoScriptTags]
     public string FamilyCode { get; set; } = string.Empty;
 
+    [Display(Name = "Family Name")]
     [Required, StringLength(200)]
     [TrimmedString]
     [NoScriptTags]

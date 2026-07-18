@@ -20,7 +20,8 @@ public sealed class NoScriptTagsAttribute : ValidationAttribute
             return ValidationResult.Success;
         }
 
-        var message = ErrorMessage ?? $"{validationContext.DisplayName} contains disallowed script content.";
+        var displayName = ValidationDisplayNameHelper.Resolve(validationContext);
+        var message = ErrorMessage ?? $"{displayName} contains disallowed script content.";
         return new ValidationResult(message);
     }
 }

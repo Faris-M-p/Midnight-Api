@@ -6,11 +6,11 @@ public interface IMembersRepository
 {
     Task<OutputPagedMembers> GetListAsync(long familyId, InputMemberListQuery query);
     Task<OutputMemberProfile?> GetProfileAsync(long familyId, long memberId);
-    Task<OutputMemberProfile> CreateAsync(long familyId, InputSaveMember input, string createdBy);
-    Task<OutputMemberProfile?> UpdateAsync(long familyId, long memberId, InputSaveMember input, string updatedBy);
+    Task<OutputMemberProfile> CreateAsync(long familyId, InputCreateMember input, string createdBy);
+    Task<OutputMemberProfile?> UpdateAsync(long familyId, long memberId, InputUpdateMember input, string updatedBy);
     Task<bool> SoftDeleteAsync(long familyId, long memberId, string deletedBy);
-    Task<OutputMemberProfile> AddChildAsync(long familyId, long parentId, InputSaveMember child, string createdBy);
-    Task<OutputMemberProfile> AddSpouseAsync(long familyId, long memberId, InputSaveMember spouse, string createdBy);
+    Task<OutputMemberProfile> AddChildAsync(long familyId, long parentId, InputCreateMember child, string createdBy);
+    Task<OutputMemberProfile> AddSpouseAsync(long familyId, long memberId, InputCreateMember spouse, string createdBy);
     Task MapSpouseAsync(long familyId, long memberId, long spouseId, string updatedBy);
     Task<OutputFamilyTree> GetTreeAsync(long familyId);
     Task<OutputDashboard> GetDashboardAsync(long familyId);

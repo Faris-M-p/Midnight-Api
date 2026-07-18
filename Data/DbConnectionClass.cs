@@ -49,6 +49,36 @@ public class DbConnectionClass : DbContext
             .HasForeignKey(m => m.FK_Families)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<MemberAddress>()
+            .HasOne(a => a.Member)
+            .WithMany(m => m.Addresses)
+            .HasForeignKey(a => a.FK_Members)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MemberImage>()
+            .HasOne(i => i.Member)
+            .WithMany(m => m.Images)
+            .HasForeignKey(i => i.FK_Members)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MemberEvent>()
+            .HasOne(e => e.Member)
+            .WithMany(m => m.Events)
+            .HasForeignKey(e => e.FK_Members)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MemberSocialLink>()
+            .HasOne(s => s.Member)
+            .WithMany(m => m.SocialLinks)
+            .HasForeignKey(s => s.FK_Members)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MemberNote>()
+            .HasOne(n => n.Member)
+            .WithMany(m => m.Notes)
+            .HasForeignKey(n => n.FK_Members)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<UserAccount>()
             .HasOne(u => u.Family)
             .WithOne(f => f.UserAccount)

@@ -34,7 +34,9 @@ public sealed class DateRangeAttribute : ValidationAttribute
             return ValidationResult.Success;
         }
 
-        var message = ErrorMessage ?? $"{_fromPropertyName} must be less than or equal to {_toPropertyName}.";
+        var fromDisplayName = ValidationDisplayNameHelper.Resolve(validationContext, _fromPropertyName);
+        var toDisplayName = ValidationDisplayNameHelper.Resolve(validationContext, _toPropertyName);
+        var message = ErrorMessage ?? $"{fromDisplayName} must be less than or equal to {toDisplayName}.";
         return new ValidationResult(message);
     }
 

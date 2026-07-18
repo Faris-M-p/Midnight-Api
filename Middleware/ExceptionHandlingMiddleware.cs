@@ -42,6 +42,7 @@ public class ExceptionHandlingMiddleware
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         var (statusCode, message, code) = MapException(exception);
+        var developerMessage = ResolveDeveloperMessage(exception);
 
         if (statusCode >= StatusCodes.Status500InternalServerError)
         {
@@ -74,7 +75,8 @@ public class ExceptionHandlingMiddleware
             message,
             statusCode,
             traceId: context.TraceIdentifier,
-            errors: errors);
+            errors: errors,
+            developerMessage: developerMessage);
 
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = statusCode;
@@ -101,5 +103,24 @@ public class ExceptionHandlingMiddleware
     {
         return exception.InnerException?.Message.Contains("duplicate", StringComparison.OrdinalIgnoreCase) == true
             || exception.InnerException?.Message.Contains("unique", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    private string ResolveDeveloperMessage(Exception exception)
+    {
+        if (!_environment.IsDevelopment())
+        {
+            return string.Empty;
+        }
+
+        if (exception is AppException appException && !string.IsNullOrWhiteSpace(appException.DeveloperMessage))
+        {
+            return appException.DeveloperMessage!;
+        }
+
+        var inner = exception.InnerException is null
+            ? string.Empty
+            : $" | Inner: {exception.InnerException.GetType().Name}: {exception.InnerException.Message}";
+
+        return $"{exception.GetType().Name}: {exception.Message}{inner}";
     }
 }

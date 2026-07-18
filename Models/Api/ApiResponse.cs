@@ -16,6 +16,7 @@ public class ApiResponse<T>
     public bool Success { get; set; }
     public int StatusCode { get; set; }
     public string Message { get; set; } = string.Empty;
+    public string DeveloperMessage { get; set; } = string.Empty;
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public T? Data { get; set; }
@@ -30,13 +31,15 @@ public class ApiResponse<T>
         T? data,
         string message = "Success",
         int statusCode = StatusCodes.Status200OK,
-        string? traceId = null)
+        string? traceId = null,
+        string developerMessage = "")
     {
         return new ApiResponse<T>
         {
             Success = true,
             StatusCode = statusCode,
             Message = message,
+            DeveloperMessage = developerMessage,
             Data = data,
             Errors = null,
             TraceId = traceId
@@ -47,13 +50,15 @@ public class ApiResponse<T>
         string message,
         int statusCode,
         string? traceId = null,
-        List<ApiError>? errors = null)
+        List<ApiError>? errors = null,
+        string developerMessage = "")
     {
         return new ApiResponse<T>
         {
             Success = false,
             StatusCode = statusCode,
             Message = message,
+            DeveloperMessage = developerMessage,
             Data = default,
             Errors = errors ??
             [
@@ -72,7 +77,8 @@ public class ApiResponse<T>
         int statusCode,
         string code,
         string? field = null,
-        string? traceId = null)
+        string? traceId = null,
+        string developerMessage = "")
     {
         return Fail(
             message,
@@ -85,6 +91,7 @@ public class ApiResponse<T>
                     Message = message,
                     Field = field
                 }
-            ]);
+            ],
+            developerMessage);
     }
 }

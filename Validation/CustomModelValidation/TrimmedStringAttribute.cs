@@ -17,7 +17,8 @@ public sealed class TrimmedStringAttribute : ValidationAttribute
             return ValidationResult.Success;
         }
 
-        var message = ErrorMessage ?? $"{validationContext.DisplayName} must not have leading or trailing spaces.";
+        var displayName = ValidationDisplayNameHelper.Resolve(validationContext);
+        var message = ErrorMessage ?? $"{displayName} must not have leading or trailing spaces.";
         return new ValidationResult(message);
     }
 }

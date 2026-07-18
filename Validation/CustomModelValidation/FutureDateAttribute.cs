@@ -27,7 +27,8 @@ public sealed class FutureDateAttribute : ValidationAttribute
             return ValidationResult.Success;
         }
 
-        var message = ErrorMessage ?? $"{validationContext.DisplayName} must be a future date.";
+        var displayName = ValidationDisplayNameHelper.Resolve(validationContext);
+        var message = ErrorMessage ?? $"{displayName} must be a future date.";
         return new ValidationResult(message);
     }
 }
