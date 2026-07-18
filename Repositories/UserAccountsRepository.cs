@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MidnightApi.Data;
 using MidnightApi.Interfaces;
-using MidnightApi.Models.Entities;
+using MidnightApi.Repositories.Managers;
 
 namespace MidnightApi.Repositories;
 
@@ -10,70 +10,48 @@ using MidnightApi.Models.Api;
 public class UserAccountsRepository : IUserAccountsRepository
 {
     private readonly DbConnectionClass _db;
+    private readonly UserAccountsRepositoryManager _manager;
 
-    public UserAccountsRepository(DbConnectionClass db)
+    public UserAccountsRepository(DbConnectionClass db, UserAccountsRepositoryManager manager)
     {
         _db = db;
+        _manager = manager;
     }
 
     public async Task<OutputGetAccount?> GetByIdAsync(long id)
     {
-        var account = await _db.UserAccounts
-            .FirstOrDefaultAsync(a => a.ID_UserAccounts == id && !a.IsCancelled);
-
-        return account is null ? null : MapToOutput(account);
+        var account = await _manager.LoadActiveByIdAsync(id);
+        return account is null ? null : _manager.MapToOutput(account);
     }
 
     public async Task<(OutputGetAccount Account, string PasswordHash)?> GetLoginByUsernameAsync(string username)
     {
-        var account = await _db.UserAccounts
-            .FirstOrDefaultAsync(a => a.Username == username && !a.IsCancelled);
-
-        return account is null ? null : (MapToOutput(account), account.PasswordHash);
+        var account = await _manager.LoadActiveByUsernameAsync(username);
+        return account is null ? null : (_manager.MapToOutput(account), account.PasswordHash);
     }
 
     public async Task<OutputGetAccount> CreateAsync(InputCreateAccount input, string createdBy)
     {
-        var account = new UserAccount
-        {
-            FK_Families = input.FK_Families,
-            Username = input.Username,
-            Email = input.Email,
-            PasswordHash = input.PasswordHash,
-            IsActive = input.IsActive,
-            CreatedBy = createdBy,
-            CreatedOn = DateTime.UtcNow
-        };
-
+        var account = _manager.BuildCreateEntity(input, createdBy);
         _db.UserAccounts.Add(account);
         await _db.SaveChangesAsync();
-        return MapToOutput(account);
+        return _manager.MapToOutput(account);
     }
 
     public async Task<OutputGetAccount?> UpdateAsync(long id, InputUpdateAccount input, string updatedBy)
     {
-        var existing = await _db.UserAccounts
-            .FirstOrDefaultAsync(a => a.ID_UserAccounts == id && !a.IsCancelled);
+        var existing = await _manager.LoadActiveByIdAsync(id);
         if (existing is null)
         {
             return null;
         }
 
-        existing.Username = input.Username;
-        existing.Email = input.Email;
-        if (!string.IsNullOrWhiteSpace(input.PasswordHash))
-        {
-            existing.PasswordHash = input.PasswordHash;
-        }
-
-        existing.UpdatedBy = updatedBy;
-        existing.UpdatedOn = DateTime.UtcNow;
-
+        _manager.ApplyUpdate(existing, input, updatedBy);
         await _db.SaveChangesAsync();
-        return MapToOutput(existing);
+        return _manager.MapToOutput(existing);
     }
 
-    public async Task<bool> ExistsByUsernameAsync(string username, long? excludeId = null)
+    public Task<bool> ExistsByUsernameAsync(string username, long? excludeId = null)
     {
         var query = _db.UserAccounts
             .Where(a => a.Username == username && !a.IsCancelled);
@@ -83,15 +61,6 @@ public class UserAccountsRepository : IUserAccountsRepository
             query = query.Where(a => a.ID_UserAccounts != excludeId.Value);
         }
 
-        return await query.AnyAsync();
+        return query.AnyAsync();
     }
-
-    private static OutputGetAccount MapToOutput(UserAccount account) => new()
-    {
-        ID_UserAccounts = account.ID_UserAccounts,
-        FK_Families = account.FK_Families,
-        Username = account.Username,
-        Email = account.Email,
-        IsActive = account.IsActive
-    };
 }

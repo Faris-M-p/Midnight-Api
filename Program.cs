@@ -5,6 +5,7 @@ using MidnightApi.Interfaces;
 using MidnightApi.Middleware;
 using MidnightApi.Auth;
 using MidnightApi.Repositories;
+using MidnightApi.Repositories.Managers;
 using MidnightApi.Services;
 using MidnightApi.Swagger;
 
@@ -28,6 +29,9 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<DbConnectionClass>(options =>
     options.UseNpgsql(connectionString));
 
+builder.Services.AddScoped<FamiliesRepositoryManager>();
+builder.Services.AddScoped<MembersRepositoryManager>();
+builder.Services.AddScoped<UserAccountsRepositoryManager>();
 builder.Services.AddScoped<IFamiliesRepository, FamiliesRepository>();
 builder.Services.AddScoped<IMembersRepository, MembersRepository>();
 builder.Services.AddScoped<IUserAccountsRepository, UserAccountsRepository>();
