@@ -170,63 +170,6 @@ public class MembersRepository : IMembersRepository
         return true;
     }
 
-    public async Task<OutputMemberProfile> AddChildAsync(long familyId, long parentId, InputCreateMember child, string createdBy)
-    {
-        var parent = await _db.Members
-            .FirstOrDefaultAsync(m => m.ID_Members == parentId && m.FK_Families == familyId && !m.IsCancelled)
-            ?? throw new NotFoundException("Parent member not found.");
-
-        child.ParentId = parent.ID_Members;
-        child.IsRoot = false;
-        return await CreateAsync(familyId, child, createdBy);
-    }
-
-    public async Task<OutputMemberProfile> AddSpouseAsync(long familyId, long memberId, InputCreateMember spouseInput, string createdBy)
-    {
-        var member = await _db.Members
-            .FirstOrDefaultAsync(m => m.ID_Members == memberId && m.FK_Families == familyId && !m.IsCancelled)
-            ?? throw new NotFoundException("Member not found.");
-
-        if (member.FK_Members_Spouse.HasValue)
-        {
-            throw new ConflictException("Member already has a spouse.");
-        }
-
-        spouseInput.IsRoot = false;
-        spouseInput.ParentId = null;
-        spouseInput.SpouseId = null;
-        await ValidateSaveBusinessAsync(familyId, spouseInput, memberId: null);
-
-        await using var tx = await _db.Database.BeginTransactionAsync();
-        try
-        {
-            var spouse = _manager.MapToEntity(familyId, spouseInput, createdBy);
-            _db.Members.Add(spouse);
-            await _db.SaveChangesAsync();
-
-            await _manager.SaveAddressesAsync(spouse.ID_Members, spouseInput.Addresses, createdBy);
-            await _manager.SaveImagesAsync(spouse.ID_Members, spouseInput.Images, createdBy);
-            await _manager.SaveEventsAsync(spouse.ID_Members, spouseInput.Events, createdBy);
-            await _manager.SaveNotesAsync(spouse.ID_Members, spouseInput.Notes, createdBy);
-            await _manager.SaveSocialLinksAsync(spouse.ID_Members, spouseInput.SocialLinks, createdBy);
-
-            member.FK_Members_Spouse = spouse.ID_Members;
-            spouse.FK_Members_Spouse = member.ID_Members;
-            member.UpdatedBy = createdBy;
-            member.UpdatedOn = DateTime.UtcNow;
-
-            await _db.SaveChangesAsync();
-            await tx.CommitAsync();
-
-            return (await GetProfileAsync(familyId, spouse.ID_Members))!;
-        }
-        catch
-        {
-            await tx.RollbackAsync();
-            throw;
-        }
-    }
-
     public async Task MapSpouseAsync(long familyId, long memberId, long spouseId, string updatedBy)
     {
         if (!await ExistsInFamilyAsync(familyId, memberId) || !await ExistsInFamilyAsync(familyId, spouseId))
@@ -259,29 +202,6 @@ public class MembersRepository : IMembersRepository
         member.UpdatedOn = DateTime.UtcNow;
         spouse.UpdatedOn = DateTime.UtcNow;
         await _db.SaveChangesAsync();
-    }
-
-    public async Task<OutputFamilyTree> GetTreeAsync(long familyId)
-    {
-        var total = await _db.Members.CountAsync(m => m.FK_Families == familyId && !m.IsCancelled);
-        var root = await _db.Members
-            .Where(m => m.FK_Families == familyId && m.IsRoot && !m.IsCancelled)
-            .Include(m => m.Images.Where(i => !i.IsCancelled))
-            .FirstOrDefaultAsync();
-
-        if (root is null)
-        {
-            return new OutputFamilyTree { TotalMembers = total };
-        }
-
-        await _manager.LoadSpouseDetailsAsync(root);
-        await _manager.LoadChildrenRecursiveAsync(root);
-
-        return new OutputFamilyTree
-        {
-            Root = _manager.MapToTreeNode(root),
-            TotalMembers = total
-        };
     }
 
     public async Task<OutputDashboard> GetDashboardAsync(long familyId)

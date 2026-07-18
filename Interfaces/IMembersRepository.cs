@@ -9,10 +9,7 @@ public interface IMembersRepository
     Task<OutputMemberProfile> CreateAsync(long familyId, InputCreateMember input, string createdBy);
     Task<OutputMemberProfile?> UpdateAsync(long familyId, long memberId, InputUpdateMember input, string updatedBy);
     Task<bool> SoftDeleteAsync(long familyId, long memberId, string deletedBy);
-    Task<OutputMemberProfile> AddChildAsync(long familyId, long parentId, InputCreateMember child, string createdBy);
-    Task<OutputMemberProfile> AddSpouseAsync(long familyId, long memberId, InputCreateMember spouse, string createdBy);
     Task MapSpouseAsync(long familyId, long memberId, long spouseId, string updatedBy);
-    Task<OutputFamilyTree> GetTreeAsync(long familyId);
     Task<OutputDashboard> GetDashboardAsync(long familyId);
     Task<List<OutputTimelineItem>> GetTimelineAsync(long familyId);
     Task<bool> ExistsInFamilyAsync(long familyId, long memberId);

@@ -51,22 +51,13 @@ public static class DatabaseInitializer
     private static async Task RemoveLegacyShadowForeignKeysAsync(DbConnectionClass db)
     {
         // Cleanup old EF-convention shadow FK columns left from previous schema versions.
-        // Current model uses only FK_Members for child tables.
+        // Use CASCADE to remove any dependent constraints regardless of their generated names.
         await db.Database.ExecuteSqlRawAsync("""
-            ALTER TABLE "MemberAddresses" DROP CONSTRAINT IF EXISTS "FK_MemberAddresses_Members_MemberID_Members";
-            ALTER TABLE "MemberAddresses" DROP COLUMN IF EXISTS "MemberID_Members";
-
-            ALTER TABLE "MemberImages" DROP CONSTRAINT IF EXISTS "FK_MemberImages_Members_MemberID_Members";
-            ALTER TABLE "MemberImages" DROP COLUMN IF EXISTS "MemberID_Members";
-
-            ALTER TABLE "MemberEvents" DROP CONSTRAINT IF EXISTS "FK_MemberEvents_Members_MemberID_Members";
-            ALTER TABLE "MemberEvents" DROP COLUMN IF EXISTS "MemberID_Members";
-
-            ALTER TABLE "MemberNotes" DROP CONSTRAINT IF EXISTS "FK_MemberNotes_Members_MemberID_Members";
-            ALTER TABLE "MemberNotes" DROP COLUMN IF EXISTS "MemberID_Members";
-
-            ALTER TABLE "MemberSocialLinks" DROP CONSTRAINT IF EXISTS "FK_MemberSocialLinks_Members_MemberID_Members";
-            ALTER TABLE "MemberSocialLinks" DROP COLUMN IF EXISTS "MemberID_Members";
+            ALTER TABLE "MemberAddresses" DROP COLUMN IF EXISTS "MemberID_Members" CASCADE;
+            ALTER TABLE "MemberImages" DROP COLUMN IF EXISTS "MemberID_Members" CASCADE;
+            ALTER TABLE "MemberEvents" DROP COLUMN IF EXISTS "MemberID_Members" CASCADE;
+            ALTER TABLE "MemberNotes" DROP COLUMN IF EXISTS "MemberID_Members" CASCADE;
+            ALTER TABLE "MemberSocialLinks" DROP COLUMN IF EXISTS "MemberID_Members" CASCADE;
             """);
     }
 }

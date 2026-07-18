@@ -84,14 +84,6 @@ public class InputMemberRouteRequest
     public long Id { get; set; }
 }
 
-public class InputMemberRelationRouteRequest
-{
-    [Display(Name = "Member Id")]
-    [FromRoute(Name = "memberId")]
-    [GreaterThanZero]
-    public long MemberId { get; set; }
-}
-
 public class OutputMemberListItem
 {
     public long Id { get; set; }
@@ -328,18 +320,6 @@ public class InputUpdateMember : InputMemberSaveBase
     public List<InputUpdateMemberEvent>? Events { get; set; }
     public List<InputUpdateMemberNote>? Notes { get; set; }
     public List<InputUpdateMemberSocialLink>? SocialLinks { get; set; }
-}
-
-public class InputAddChild
-{
-    [Required]
-    public InputCreateMember Child { get; set; } = new();
-}
-
-public class InputAddSpouse
-{
-    [Required]
-    public InputCreateMember Spouse { get; set; } = new();
 }
 
 public class InputMapSpouse

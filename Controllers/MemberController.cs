@@ -40,23 +40,6 @@ public class MemberController : ControllerBase
         });
     }
 
-    [HttpGet("tree")]
-    public async Task<IActionResult> GetTree()
-    {
-        _commonService.ValidateModelState(ModelState);
-
-        var data = await _members.GetTreeAsync(User.GetFamilyId());
-
-        return Ok(new ApiResponse<OutputFamilyTree>
-        {
-            Success = true,
-            StatusCode = StatusCodes.Status200OK,
-            Message = "Success.",
-            Data = data,
-            TraceId = HttpContext.TraceIdentifier
-        });
-    }
-
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetById([FromRoute] InputMemberRouteRequest request)
     {
@@ -125,40 +108,6 @@ public class MemberController : ControllerBase
             Success = true,
             StatusCode = StatusCodes.Status200OK,
             Message = "Member deleted successfully.",
-            TraceId = HttpContext.TraceIdentifier
-        });
-    }
-
-    [HttpPost("{memberId:long}/child")]
-    public async Task<IActionResult> AddChild([FromRoute] InputMemberRelationRouteRequest route, [FromBody] InputAddChild request)
-    {
-        _commonService.ValidateModelState(ModelState);
-
-        var child = await _members.AddChildAsync(User.GetFamilyId(), route.MemberId, request.Child, User.GetUsername());
-
-        return StatusCode(StatusCodes.Status201Created, new ApiResponse<OutputMemberProfile>
-        {
-            Success = true,
-            StatusCode = StatusCodes.Status201Created,
-            Message = "Child added successfully.",
-            Data = child,
-            TraceId = HttpContext.TraceIdentifier
-        });
-    }
-
-    [HttpPost("{memberId:long}/spouse")]
-    public async Task<IActionResult> AddSpouse([FromRoute] InputMemberRelationRouteRequest route, [FromBody] InputAddSpouse request)
-    {
-        _commonService.ValidateModelState(ModelState);
-
-        var spouse = await _members.AddSpouseAsync(User.GetFamilyId(), route.MemberId, request.Spouse, User.GetUsername());
-
-        return StatusCode(StatusCodes.Status201Created, new ApiResponse<OutputMemberProfile>
-        {
-            Success = true,
-            StatusCode = StatusCodes.Status201Created,
-            Message = "Spouse added successfully.",
-            Data = spouse,
             TraceId = HttpContext.TraceIdentifier
         });
     }
