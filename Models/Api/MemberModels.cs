@@ -1,49 +1,108 @@
-namespace MidnightApi.Models.Api;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc;
+using MidnightApi.Validation.CustomModelValidation;
 
-// --- Nested profile parts (no FK_Members exposed to clients) ---
+namespace MidnightApi.Models.Api;
 
 public class MemberAddressItem
 {
+    [GreaterThanZero]
     public long? Id { get; set; }
+
+    [Required, StringLength(300)]
+    [TrimmedString]
+    [NoScriptTags]
     public string AddressLine1 { get; set; } = string.Empty;
+
+    [StringLength(300)]
     public string? AddressLine2 { get; set; }
+
+    [Required, StringLength(100)]
+    [TrimmedString]
+    [NoScriptTags]
     public string City { get; set; } = string.Empty;
+
+    [StringLength(100)]
     public string? State { get; set; }
+
+    [Required, StringLength(100)]
+    [TrimmedString]
+    [NoScriptTags]
     public string Country { get; set; } = string.Empty;
+
+    [StringLength(20)]
     public string? PostalCode { get; set; }
+
     public bool IsPrimary { get; set; }
 }
 
 public class MemberImageItem
 {
+    [GreaterThanZero]
     public long? Id { get; set; }
+
+    [Required, Url, StringLength(2000)]
     public string ImageUrl { get; set; } = string.Empty;
+
+    [StringLength(500)]
     public string? Caption { get; set; }
+
     public bool IsPrimary { get; set; }
     public int SortOrder { get; set; }
 }
 
 public class MemberEventItem
 {
+    [GreaterThanZero]
     public long? Id { get; set; }
+
+    [Required, StringLength(50)]
+    [TrimmedString]
+    [NoScriptTags]
     public string EventType { get; set; } = string.Empty;
+
+    [Required, StringLength(200)]
+    [TrimmedString]
+    [NoScriptTags]
     public string Title { get; set; } = string.Empty;
+
+    [StringLength(2000)]
     public string? Description { get; set; }
+
     public DateOnly EventDate { get; set; }
 }
 
 public class MemberNoteItem
 {
+    [GreaterThanZero]
     public long? Id { get; set; }
+
+    [Required, StringLength(200)]
+    [TrimmedString]
+    [NoScriptTags]
     public string Title { get; set; } = string.Empty;
+
+    [Required, StringLength(4000)]
+    [NoScriptTags]
     public string Content { get; set; } = string.Empty;
 }
 
 public class MemberSocialLinkItem
 {
+    [GreaterThanZero]
     public long? Id { get; set; }
+
+    [Required, StringLength(50)]
+    [TrimmedString]
+    [NoScriptTags]
     public string Platform { get; set; } = string.Empty;
+
+    [Required, Url, StringLength(2000)]
     public string Url { get; set; } = string.Empty;
+
+    [StringLength(100)]
+    [TrimmedString]
+    [NoScriptTags]
     public string? Username { get; set; }
 }
 
@@ -58,16 +117,34 @@ public class MemberRelationSummary
     public string? PhotoUrl { get; set; }
 }
 
-// --- List / query ---
-
 public class InputMemberListQuery
 {
+    [StringLength(200)]
     public string? Search { get; set; }
+
+    [StringLength(20)]
     public string? Gender { get; set; }
+
+    [StringLength(30)]
     public string? SortBy { get; set; }
+
     public bool SortDesc { get; set; }
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
+}
+
+public class InputMemberRouteRequest
+{
+    [FromRoute(Name = "id")]
+    [GreaterThanZero]
+    public long Id { get; set; }
+}
+
+public class InputMemberRelationRouteRequest
+{
+    [FromRoute(Name = "memberId")]
+    [GreaterThanZero]
+    public long MemberId { get; set; }
 }
 
 public class OutputMemberListItem
@@ -91,8 +168,6 @@ public class OutputPagedMembers
     public int TotalCount { get; set; }
     public int TotalPages { get; set; }
 }
-
-// --- Detail / create / update ---
 
 public class OutputMemberProfile
 {
@@ -120,18 +195,49 @@ public class OutputMemberProfile
 
 public class InputSaveMember
 {
+    [Required, StringLength(100)]
+    [TrimmedString]
+    [NoScriptTags]
     public string FirstName { get; set; } = string.Empty;
+
+    [Required, StringLength(100)]
+    [TrimmedString]
+    [NoScriptTags]
     public string LastName { get; set; } = string.Empty;
+
+    [EmailAddress, StringLength(256)]
+    [TrimmedString]
     public string? Email { get; set; }
+
+    [PhoneNumber, StringLength(30)]
+    [TrimmedString]
     public string? Phone { get; set; }
+
+    [StringLength(20)]
+    [AllowedValues("Male", "Female", "Other")]
+    [TrimmedString]
     public string? Gender { get; set; }
+
     public DateOnly? DateOfBirth { get; set; }
+    [DateRange(nameof(DateOfBirth), nameof(DateOfDeath), ErrorMessage = "Date of death must be after or equal to date of birth.")]
     public DateOnly? DateOfDeath { get; set; }
     public bool IsRoot { get; set; }
+
+    [StringLength(4000)]
+    [NoScriptTags]
     public string? Biography { get; set; }
+
+    [StringLength(200)]
+    [TrimmedString]
+    [NoScriptTags]
     public string? Profession { get; set; }
+
+    [GreaterThanZero]
     public long? ParentId { get; set; }
+
+    [GreaterThanZero]
     public long? SpouseId { get; set; }
+
     public List<MemberAddressItem>? Addresses { get; set; }
     public List<MemberImageItem>? Images { get; set; }
     public List<MemberEventItem>? Events { get; set; }
@@ -141,21 +247,24 @@ public class InputSaveMember
 
 public class InputAddChild
 {
+    [Required]
     public InputSaveMember Child { get; set; } = new();
 }
 
 public class InputAddSpouse
 {
+    [Required]
     public InputSaveMember Spouse { get; set; } = new();
 }
 
 public class InputMapSpouse
 {
+    [GreaterThanZero]
     public long MemberId { get; set; }
+
+    [GreaterThanZero]
     public long SpouseId { get; set; }
 }
-
-// --- Tree ---
 
 public class OutputTreeNode
 {
@@ -177,8 +286,6 @@ public class OutputFamilyTree
     public OutputTreeNode? Root { get; set; }
     public int TotalMembers { get; set; }
 }
-
-// --- Dashboard / Timeline ---
 
 public class OutputDashboard
 {

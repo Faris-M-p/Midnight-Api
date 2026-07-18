@@ -1,41 +1,94 @@
+using System.ComponentModel.DataAnnotations;
+using MidnightApi.Validation.CustomModelValidation;
+
 namespace MidnightApi.Models.Api;
 
 public class InputRegisterAccountView
 {
+    [Required, MinLength(3), StringLength(100)]
+    [TrimmedString]
+    [NoScriptTags]
     public string Username { get; set; } = string.Empty;
+
+    [Required, EmailAddress, StringLength(256)]
+    [TrimmedString]
     public string Email { get; set; } = string.Empty;
+
+    [Required, MinLength(6), StringLength(100)]
     public string Password { get; set; } = string.Empty;
+
+    [Required, StringLength(50)]
+    [TrimmedString]
+    [NoScriptTags]
     public string FamilyCode { get; set; } = string.Empty;
+
+    [Required, StringLength(200)]
+    [TrimmedString]
+    [NoScriptTags]
     public string FamilyName { get; set; } = string.Empty;
+
+    [StringLength(1000)]
+    [NoScriptTags]
     public string? Description { get; set; }
 }
 
 public class InputLoginView
 {
+    [Required, MinLength(3), StringLength(100)]
+    [TrimmedString]
     public string Username { get; set; } = string.Empty;
+
+    [Required, MinLength(6), StringLength(100)]
     public string Password { get; set; } = string.Empty;
 }
 
 public class InputUpdateAccountView
 {
+    [Required, MinLength(3), StringLength(100)]
+    [TrimmedString]
+    [NoScriptTags]
     public string Username { get; set; } = string.Empty;
+
+    [Required, EmailAddress, StringLength(256)]
+    [TrimmedString]
     public string Email { get; set; } = string.Empty;
+
+    [MinLength(6), StringLength(100)]
     public string? Password { get; set; }
 }
 
 public class InputCreateAccount
 {
+    [GreaterThanZero]
     public long FK_Families { get; set; }
+
+    [Required, MinLength(3), StringLength(100)]
+    [TrimmedString]
+    [NoScriptTags]
     public string Username { get; set; } = string.Empty;
+
+    [Required, EmailAddress, StringLength(256)]
+    [TrimmedString]
     public string Email { get; set; } = string.Empty;
+
+    [Required, MinLength(10), StringLength(500)]
     public string PasswordHash { get; set; } = string.Empty;
+
     public bool IsActive { get; set; } = true;
 }
 
 public class InputUpdateAccount
 {
+    [Required, MinLength(3), StringLength(100)]
+    [TrimmedString]
+    [NoScriptTags]
     public string Username { get; set; } = string.Empty;
+
+    [Required, EmailAddress, StringLength(256)]
+    [TrimmedString]
     public string Email { get; set; } = string.Empty;
+
+    [MinLength(10), StringLength(500)]
     public string? PasswordHash { get; set; }
 }
 

@@ -3,11 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using MidnightApi.Auth;
 using MidnightApi.Exceptions;
 using MidnightApi.Interfaces;
+using MidnightApi.Models.Api;
 using MidnightApi.Services;
 
 namespace MidnightApi.Controllers;
-
-using MidnightApi.Models.Api;
 
 /// <summary>Admin registration, login, and account profile (one account = one family).</summary>
 [ApiController]
@@ -19,20 +18,20 @@ public class AccountController : ControllerBase
     private readonly IFamiliesRepository _families;
     private readonly PasswordService _passwords;
     private readonly JwtTokenService _jwt;
-    private readonly MemberValidationService _validation;
+    private readonly CommonService _commonService;
 
     public AccountController(
         IUserAccountsRepository accounts,
         IFamiliesRepository families,
         PasswordService passwords,
         JwtTokenService jwt,
-        MemberValidationService validation)
+        CommonService commonService)
     {
         _accounts = accounts;
         _families = families;
         _passwords = passwords;
         _jwt = jwt;
-        _validation = validation;
+        _commonService = commonService;
     }
 
     /// <summary>Register admin account and create its one family.</summary>
@@ -40,21 +39,7 @@ public class AccountController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Register([FromBody] InputRegisterAccountView request)
     {
-        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
-        {
-            throw new BadRequestException("Username and password are required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(request.FamilyCode) || string.IsNullOrWhiteSpace(request.FamilyName))
-        {
-            throw new BadRequestException("Family code and family name are required.");
-        }
-
-        var emailError = _validation.ValidateEmail(request.Email);
-        if (emailError is not null)
-        {
-            throw new BadRequestException(emailError);
-        }
+        _commonService.ValidateModelState(ModelState);
 
         if (await _accounts.ExistsByUsernameAsync(request.Username.Trim()))
         {
@@ -66,12 +51,13 @@ public class AccountController : ControllerBase
             throw new ConflictException("Family code already exists.");
         }
 
+        var actor = request.Username.Trim();
         var family = await _families.CreateAsync(new InputCreateFamily
         {
             FamilyCode = request.FamilyCode.Trim(),
             FamilyName = request.FamilyName.Trim(),
             Description = request.Description
-        }, request.Username.Trim());
+        }, actor);
 
         var account = await _accounts.CreateAsync(new InputCreateAccount
         {
@@ -80,7 +66,7 @@ public class AccountController : ControllerBase
             Email = request.Email.Trim(),
             PasswordHash = _passwords.Hash(request.Password),
             IsActive = true
-        }, request.Username.Trim());
+        }, actor);
 
         return StatusCode(StatusCodes.Status201Created, new ApiResponse<OutputRegister>
         {
@@ -102,10 +88,7 @@ public class AccountController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] InputLoginView request)
     {
-        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
-        {
-            throw new BadRequestException("Username and password are required.");
-        }
+        _commonService.ValidateModelState(ModelState);
 
         var login = await _accounts.GetLoginByUsernameAsync(request.Username.Trim());
         if (login is null || !_passwords.Verify(request.Password, login.Value.PasswordHash))
@@ -148,6 +131,8 @@ public class AccountController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetMe()
     {
+        _commonService.ValidateModelState(ModelState);
+
         var account = await _accounts.GetByIdAsync(User.GetAccountId())
             ?? throw new NotFoundException("Account not found.");
 
@@ -166,17 +151,12 @@ public class AccountController : ControllerBase
     [Authorize]
     public async Task<IActionResult> UpdateMe([FromBody] InputUpdateAccountView request)
     {
-        var accountId = User.GetAccountId();
+        _commonService.ValidateModelState(ModelState);
 
+        var accountId = User.GetAccountId();
         if (await _accounts.ExistsByUsernameAsync(request.Username.Trim(), accountId))
         {
             throw new ConflictException("Username already exists.");
-        }
-
-        var emailError = _validation.ValidateEmail(request.Email);
-        if (emailError is not null)
-        {
-            throw new BadRequestException(emailError);
         }
 
         var updated = await _accounts.UpdateAsync(accountId, new InputUpdateAccount

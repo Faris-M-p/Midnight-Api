@@ -3,10 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using MidnightApi.Auth;
 using MidnightApi.Exceptions;
 using MidnightApi.Interfaces;
+using MidnightApi.Models.Api;
+using MidnightApi.Services;
 
 namespace MidnightApi.Controllers;
-
-using MidnightApi.Models.Api;
 
 [ApiController]
 [Route("api/family")]
@@ -16,16 +16,20 @@ public class FamilyController : ControllerBase
 {
     private readonly IFamiliesRepository _families;
     private readonly IMembersRepository _members;
+    private readonly CommonService _commonService;
 
-    public FamilyController(IFamiliesRepository families, IMembersRepository members)
+    public FamilyController(IFamiliesRepository families, IMembersRepository members, CommonService commonService)
     {
         _families = families;
         _members = members;
+        _commonService = commonService;
     }
 
     [HttpGet]
     public async Task<IActionResult> Get()
     {
+        _commonService.ValidateModelState(ModelState);
+
         var family = await _families.GetByIdAsync(User.GetFamilyId())
             ?? throw new NotFoundException("Family not found.");
 
@@ -42,6 +46,8 @@ public class FamilyController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> Update([FromBody] InputUpdateFamilyView request)
     {
+        _commonService.ValidateModelState(ModelState);
+
         var updated = await _families.UpdateAsync(User.GetFamilyId(), new InputUpdateFamily
         {
             FamilyName = request.FamilyName.Trim(),
@@ -62,6 +68,8 @@ public class FamilyController : ControllerBase
     [HttpGet("dashboard")]
     public async Task<IActionResult> GetDashboard()
     {
+        _commonService.ValidateModelState(ModelState);
+
         var data = await _members.GetDashboardAsync(User.GetFamilyId());
 
         return Ok(new ApiResponse<OutputDashboard>
@@ -77,6 +85,8 @@ public class FamilyController : ControllerBase
     [HttpGet("timeline")]
     public async Task<IActionResult> GetTimeline()
     {
+        _commonService.ValidateModelState(ModelState);
+
         var data = await _members.GetTimelineAsync(User.GetFamilyId());
 
         return Ok(new ApiResponse<List<OutputTimelineItem>>

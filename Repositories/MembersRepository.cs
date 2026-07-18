@@ -5,6 +5,7 @@ using MidnightApi.Interfaces;
 using MidnightApi.Models.Api;
 using MidnightApi.Models.Entities;
 using MidnightApi.Repositories.Managers;
+using MidnightApi.Services;
 
 namespace MidnightApi.Repositories;
 
@@ -12,11 +13,13 @@ public class MembersRepository : IMembersRepository
 {
     private readonly DbConnectionClass _db;
     private readonly MembersRepositoryManager _manager;
+    private readonly MemberValidationService _validation;
 
-    public MembersRepository(DbConnectionClass db, MembersRepositoryManager manager)
+    public MembersRepository(DbConnectionClass db, MembersRepositoryManager manager, MemberValidationService validation)
     {
         _db = db;
         _manager = manager;
+        _validation = validation;
     }
 
     public async Task<OutputPagedMembers> GetListAsync(long familyId, InputMemberListQuery query)
@@ -80,6 +83,8 @@ public class MembersRepository : IMembersRepository
 
     public async Task<OutputMemberProfile> CreateAsync(long familyId, InputSaveMember input, string createdBy)
     {
+        await ValidateSaveBusinessAsync(familyId, input, memberId: null);
+
         await using var tx = await _db.Database.BeginTransactionAsync();
         try
         {
@@ -115,6 +120,8 @@ public class MembersRepository : IMembersRepository
             {
                 return null;
             }
+
+            await ValidateSaveBusinessAsync(familyId, input, memberId);
 
             _manager.ApplyBasicFields(existing, input, updatedBy);
             await _manager.SyncNestedAsync(memberId, input, updatedBy, replaceMissing: true);
@@ -187,6 +194,7 @@ public class MembersRepository : IMembersRepository
         spouseInput.IsRoot = false;
         spouseInput.ParentId = null;
         spouseInput.SpouseId = null;
+        await ValidateSaveBusinessAsync(familyId, spouseInput, memberId: null);
 
         await using var tx = await _db.Database.BeginTransactionAsync();
         try
@@ -216,6 +224,21 @@ public class MembersRepository : IMembersRepository
 
     public async Task MapSpouseAsync(long familyId, long memberId, long spouseId, string updatedBy)
     {
+        if (!await ExistsInFamilyAsync(familyId, memberId) || !await ExistsInFamilyAsync(familyId, spouseId))
+        {
+            throw new NotFoundException("One or both members were not found in this family.");
+        }
+
+        var validationError = await _validation.ValidateMapSpouseAsync(
+            memberId,
+            spouseId,
+            async id => await GetRelationAsync(familyId, id)
+                ?? throw new NotFoundException("Member not found."));
+        if (validationError is not null)
+        {
+            throw new BadRequestException(validationError);
+        }
+
         var member = await _db.Members
             .FirstOrDefaultAsync(m => m.ID_Members == memberId && m.FK_Families == familyId && !m.IsCancelled)
             ?? throw new NotFoundException("Member not found.");
@@ -431,5 +454,41 @@ public class MembersRepository : IMembersRepository
                 Username = s.Username
             }).ToList() ?? []
         };
+    }
+
+    private async Task ValidateSaveBusinessAsync(long familyId, InputSaveMember request, long? memberId)
+    {
+        var selfError = _validation.ValidateSelfReference(memberId ?? 0, request.ParentId, request.SpouseId);
+        if (selfError is not null)
+        {
+            throw new BadRequestException(selfError);
+        }
+
+        var rootError = _validation.ValidateRootMember(
+            request.IsRoot,
+            await HasRootMemberAsync(familyId, memberId));
+        if (rootError is not null)
+        {
+            throw new BadRequestException(rootError);
+        }
+
+        if (request.ParentId.HasValue && !await ExistsInFamilyAsync(familyId, request.ParentId.Value))
+        {
+            throw new NotFoundException("Parent member not found.");
+        }
+
+        if (request.SpouseId.HasValue && !await ExistsInFamilyAsync(familyId, request.SpouseId.Value))
+        {
+            throw new NotFoundException("Spouse member not found.");
+        }
+
+        var circular = await _validation.ValidateCircularParentAsync(
+            memberId ?? 0,
+            request.ParentId,
+            GetParentIdAsync);
+        if (circular is not null)
+        {
+            throw new BadRequestException(circular);
+        }
     }
 }

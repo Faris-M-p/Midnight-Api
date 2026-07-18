@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
 using MidnightApi.Data;
 using MidnightApi.Filters;
 using MidnightApi.Interfaces;
@@ -14,6 +15,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ApiResponseResultFilter>();
+});
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.SuppressModelStateInvalidFilter = true;
 });
 builder.Services.AddSwaggerDocumentation();
 builder.Services.AddJwtAuthentication(builder.Configuration);
@@ -36,6 +41,7 @@ builder.Services.AddScoped<IFamiliesRepository, FamiliesRepository>();
 builder.Services.AddScoped<IMembersRepository, MembersRepository>();
 builder.Services.AddScoped<IUserAccountsRepository, UserAccountsRepository>();
 builder.Services.AddSingleton<MemberValidationService>();
+builder.Services.AddSingleton<CommonService>();
 builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddSingleton<JwtTokenService>();
 
