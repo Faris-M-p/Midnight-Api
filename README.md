@@ -25,8 +25,8 @@ A **React frontend** is planned as a separate layer that will consume these APIs
 | Layer | Technology |
 |-------|------------|
 | Runtime | .NET 10 Web API |
-| ORM | Entity Framework Core |
-| Database | PostgreSQL |
+| Data access | Dapper + PostgreSQL stored procedures |
+| Database | PostgreSQL (SQL-first `Database` project) |
 | API docs | Swagger / OpenAPI |
 | Patterns | Repository Pattern, Dependency Injection, View/Input/Output Models |
 
@@ -35,19 +35,19 @@ A **React frontend** is planned as a separate layer that will consume these APIs
 ## Architecture
 
 ```
-Controllers (View models)  →  Repositories (Input/Output models)  →  DbConnectionClass (EF Core)  →  PostgreSQL
+Controllers → Repositories → Dapper → Stored Procedures → PostgreSQL
 ```
 
 - **3 controllers** keep the API surface simple:
   - `FamilyController` — family records
   - `MemberController` — members, tree logic, and all member sub-resources
-  - `AccountController` — login accounts linked to members
+  - `AccountController` — login accounts linked to families
 
-- **8 repository interfaces** with async implementations handle all data access. Controllers never use EF Core directly.
+- **Repositories** only call stored procedures via Dapper. Business validation stays in services.
 
 - **Soft delete** — `DELETE` endpoints set `IsCancelled = true` instead of removing rows.
 
-- **Auto database setup** — on startup, `DatabaseInitializer` creates the PostgreSQL database (if missing), creates all tables via `EnsureCreatedAsync`, and seeds demo data on first run.
+- **Database project** — `Database/` holds tables, functions, views, indexes, procedures, and seed scripts. Use `InstallDatabase.bat` / `PatchDatabase.bat`, or let startup apply schema when tables are missing.
 
 ---
 
@@ -64,7 +64,7 @@ Controllers (View models)  →  Repositories (Input/Output models)  →  DbConne
 | `MemberEvents` | Life events (birth, marriage, etc.) |
 | `MemberSocialLinks` | Social media profiles |
 | `MemberNotes` | Free-text notes |
-| `UserAccounts` | One login account per member |
+| `UserAccounts` | One login account per family |
 
 ### Key relationships
 
@@ -94,22 +94,16 @@ MidnightApi/
 │   ├── MemberController.cs      # /api/members (+ sub-resources)
 │   └── AccountController.cs     # /api/accounts
 ├── Data/
-│   ├── DbConnectionClass.cs     # EF Core DbContext
-│   └── DatabaseInitializer.cs   # Auto-create DB + seed
+│   ├── IDbConnectionFactory.cs
+│   ├── NpgsqlConnectionFactory.cs
+│   ├── StoredProcedures.cs
+│   ├── DapperExtensions.cs
+│   └── DatabaseInitializer.cs   # Ensure DB + apply SQL schema
+├── Database/                    # SQL-first schema (tables, views, SPs, patches)
 ├── Interfaces/                  # Repository contracts
 ├── Models/
-│   ├── Entities/                # Database table classes
-│   │   ├── AuditableEntity.cs
-│   │   ├── Family.cs
-│   │   ├── Member.cs
-│   │   ├── MemberAddress.cs
-│   │   ├── MemberImage.cs
-│   │   ├── MemberEvent.cs
-│   │   ├── MemberSocialLink.cs
-│   │   ├── MemberNote.cs
-│   │   └── UserAccount.cs
-│   └── Api/                     # Input, Output, and View models (MidnightApi.Models.Api)
-├── Repositories/                # Repository implementations
+│   └── Api/                     # Input, Output, and View models
+├── Repositories/                # Dapper → stored procedure calls only
 ├── Services/
 │   └── MemberValidationService.cs
 ├── Program.cs
@@ -145,18 +139,7 @@ The API starts at **http://localhost:5196**. Swagger UI is at:
 
 **http://localhost:5196/swagger**
 
-On first run the database and tables are created automatically, and demo data is seeded.
-
-### Demo seed data
-
-| Item | Details |
-|------|---------|
-| Family | `DEMO-001` — Demo Family |
-| Root | John Demo + spouse Jane Demo |
-| Children | Michael Demo, Sarah Demo |
-| Grandchildren | Emily Demo (under Michael), David Demo (under Sarah) |
-
-Try: `GET /api/members/tree/1` to see the full nested tree.
+On first run the database is created if missing, and SQL schema/procedures from the `Database` project are applied.
 
 ---
 

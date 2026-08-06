@@ -1,19 +1,39 @@
-using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 namespace MidnightApi.Data;
 
 public static class DatabaseInitializer
 {
-    public static async Task EnsureCreatedAsync(IServiceProvider services, string connectionString)
+    public static async Task EnsureDatabaseAsync(string connectionString)
     {
         await EnsureDatabaseExistsAsync(connectionString);
 
-        using var scope = services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<DbConnectionClass>();
-        await db.Database.EnsureCreatedAsync();
-        await RemoveLegacyShadowForeignKeysAsync(db);
-        await EnsureMemberNicknameColumnAsync(db);
+        var databaseRoot = ResolveDatabaseRoot();
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        await connection.EnsureSchemaAsync(databaseRoot);
+    }
+
+    private static string ResolveDatabaseRoot()
+    {
+        var candidates = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "Database"),
+            Path.Combine(Directory.GetCurrentDirectory(), "Database"),
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Database")),
+            Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "Database"))
+        };
+
+        foreach (var path in candidates)
+        {
+            if (Directory.Exists(path) && File.Exists(Path.Combine(path, "Database.sql")))
+            {
+                return path;
+            }
+        }
+
+        throw new DirectoryNotFoundException(
+            "Database project folder was not found. Expected a Database directory with Database.sql.");
     }
 
     private static async Task EnsureDatabaseExistsAsync(string connectionString)
@@ -43,29 +63,9 @@ public static class DatabaseInitializer
             return;
         }
 
-        var escapedDbName = targetDatabase.Replace("\"", "\"\"");
+        var escapedDbName = targetDatabase.Replace("\"", "\"\"", StringComparison.Ordinal);
         await using var createCommand =
             new NpgsqlCommand($"CREATE DATABASE \"{escapedDbName}\"", connection);
         await createCommand.ExecuteNonQueryAsync();
-    }
-
-    private static async Task RemoveLegacyShadowForeignKeysAsync(DbConnectionClass db)
-    {
-        // Cleanup old EF-convention shadow FK columns left from previous schema versions.
-        // Use CASCADE to remove any dependent constraints regardless of their generated names.
-        await db.Database.ExecuteSqlRawAsync("""
-            ALTER TABLE "MemberAddresses" DROP COLUMN IF EXISTS "MemberID_Members" CASCADE;
-            ALTER TABLE "MemberImages" DROP COLUMN IF EXISTS "MemberID_Members" CASCADE;
-            ALTER TABLE "MemberEvents" DROP COLUMN IF EXISTS "MemberID_Members" CASCADE;
-            ALTER TABLE "MemberNotes" DROP COLUMN IF EXISTS "MemberID_Members" CASCADE;
-            ALTER TABLE "MemberSocialLinks" DROP COLUMN IF EXISTS "MemberID_Members" CASCADE;
-            """);
-    }
-
-    private static async Task EnsureMemberNicknameColumnAsync(DbConnectionClass db)
-    {
-        await db.Database.ExecuteSqlRawAsync("""
-            ALTER TABLE "Members" ADD COLUMN IF NOT EXISTS "Nickname" character varying(100) NULL;
-            """);
     }
 }

@@ -1,0 +1,2 @@
+-- \i EventType.sql
+-- \i NotificationType.sql

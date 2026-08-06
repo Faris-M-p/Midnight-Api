@@ -1,0 +1,2 @@
+-- Event type reference values (documentation / optional check helper)
+-- Birth, Death, Marriage, Divorce, Graduation, Other

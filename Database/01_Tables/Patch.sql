@@ -1,0 +1,9 @@
+-- Uncomment only the required changes
+-- \i Families.sql
+-- \i Members.sql
+-- \i MemberAddresses.sql
+-- \i MemberImages.sql
+-- \i MemberEvents.sql
+-- \i MemberNotes.sql
+-- \i MemberSocialLinks.sql
+-- \i UserAccounts.sql

@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using MidnightApi.Data;
 using MidnightApi.Filters;
@@ -6,7 +5,6 @@ using MidnightApi.Interfaces;
 using MidnightApi.Middleware;
 using MidnightApi.Auth;
 using MidnightApi.Repositories;
-using MidnightApi.Repositories.Managers;
 using MidnightApi.Services;
 using MidnightApi.Swagger;
 
@@ -31,12 +29,7 @@ builder.Services.AddCors(options =>
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("DefaultConnection is missing in appsettings.");
 
-builder.Services.AddDbContext<DbConnectionClass>(options =>
-    options.UseNpgsql(connectionString));
-
-builder.Services.AddScoped<FamiliesRepositoryManager>();
-builder.Services.AddScoped<MembersRepositoryManager>();
-builder.Services.AddScoped<UserAccountsRepositoryManager>();
+builder.Services.AddSingleton<IDbConnectionFactory>(_ => new NpgsqlConnectionFactory(connectionString));
 builder.Services.AddScoped<IFamiliesRepository, FamiliesRepository>();
 builder.Services.AddScoped<IMembersRepository, MembersRepository>();
 builder.Services.AddScoped<IUserAccountsRepository, UserAccountsRepository>();
@@ -47,7 +40,7 @@ builder.Services.AddSingleton<JwtTokenService>();
 
 var app = builder.Build();
 
-await DatabaseInitializer.EnsureCreatedAsync(app.Services, connectionString);
+await DatabaseInitializer.EnsureDatabaseAsync(connectionString);
 
 app.UseGlobalExceptionHandling();
 app.UseSwaggerDocumentation();

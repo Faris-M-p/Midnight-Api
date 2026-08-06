@@ -1,0 +1,2 @@
+-- \i DefaultSettings.sql
+-- \i DefaultPermissions.sql

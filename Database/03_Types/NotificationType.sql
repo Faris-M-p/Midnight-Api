@@ -1,0 +1,2 @@
+-- Notification type placeholders for future use
+-- Info, Warning, Reminder

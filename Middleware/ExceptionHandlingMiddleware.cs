@@ -1,7 +1,7 @@
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
 using MidnightApi.Exceptions;
 using MidnightApi.Models.Api;
+using Npgsql;
 
 namespace MidnightApi.Middleware;
 
@@ -92,17 +92,12 @@ public class ExceptionHandlingMiddleware
             KeyNotFoundException keyNotFound => (StatusCodes.Status404NotFound, keyNotFound.Message, "NOT_FOUND"),
             ArgumentException argument => (StatusCodes.Status400BadRequest, argument.Message, "BAD_REQUEST"),
             UnauthorizedAccessException unauthorized => (StatusCodes.Status401Unauthorized, unauthorized.Message, "UNAUTHORIZED"),
-            DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "The record was modified by another request.", "CONCURRENCY_CONFLICT"),
-            DbUpdateException dbUpdate when IsUniqueConstraintViolation(dbUpdate) =>
+            PostgresException pg when pg.SqlState == PostgresErrorCodes.UniqueViolation =>
                 (StatusCodes.Status409Conflict, "A record with the same unique value already exists.", "UNIQUE_CONSTRAINT"),
+            PostgresException pg when pg.SqlState == PostgresErrorCodes.SerializationFailure =>
+                (StatusCodes.Status409Conflict, "The record was modified by another request.", "CONCURRENCY_CONFLICT"),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred.", "INTERNAL_ERROR")
         };
-    }
-
-    private static bool IsUniqueConstraintViolation(DbUpdateException exception)
-    {
-        return exception.InnerException?.Message.Contains("duplicate", StringComparison.OrdinalIgnoreCase) == true
-            || exception.InnerException?.Message.Contains("unique", StringComparison.OrdinalIgnoreCase) == true;
     }
 
     private string ResolveDeveloperMessage(Exception exception)

@@ -1,66 +1,96 @@
-using Microsoft.EntityFrameworkCore;
+using Dapper;
 using MidnightApi.Data;
 using MidnightApi.Interfaces;
-using MidnightApi.Repositories.Managers;
+using MidnightApi.Models.Api;
+using Npgsql;
 
 namespace MidnightApi.Repositories;
 
-using MidnightApi.Models.Api;
-
 public class UserAccountsRepository : IUserAccountsRepository
 {
-    private readonly DbConnectionClass _db;
-    private readonly UserAccountsRepositoryManager _manager;
+    private readonly IDbConnectionFactory _connections;
 
-    public UserAccountsRepository(DbConnectionClass db, UserAccountsRepositoryManager manager)
+    public UserAccountsRepository(IDbConnectionFactory connections)
     {
-        _db = db;
-        _manager = manager;
+        _connections = connections;
     }
 
     public async Task<OutputGetAccount?> GetByIdAsync(long id)
     {
-        var account = await _manager.LoadActiveByIdAsync(id);
-        return account is null ? null : _manager.MapToOutput(account);
+        await using var connection = (NpgsqlConnection)await _connections.CreateOpenConnectionAsync();
+        return await connection.QuerySingleOrDefaultAsync<OutputGetAccount>(
+            StoredProcedures.AccountSelect,
+            new { p_id = id });
     }
 
     public async Task<(OutputGetAccount Account, string PasswordHash)?> GetLoginByUsernameAsync(string username)
     {
-        var account = await _manager.LoadActiveByUsernameAsync(username);
-        return account is null ? null : (_manager.MapToOutput(account), account.PasswordHash);
-    }
+        await using var connection = (NpgsqlConnection)await _connections.CreateOpenConnectionAsync();
+        var row = await connection.QuerySingleOrDefaultAsync<AccountLoginRow>(
+            StoredProcedures.AccountLogin,
+            new { p_username = username });
 
-    public async Task<OutputGetAccount> CreateAsync(InputCreateAccount input, string createdBy)
-    {
-        var account = _manager.BuildCreateEntity(input, createdBy);
-        _db.UserAccounts.Add(account);
-        await _db.SaveChangesAsync();
-        return _manager.MapToOutput(account);
-    }
-
-    public async Task<OutputGetAccount?> UpdateAsync(long id, InputUpdateAccount input, string updatedBy)
-    {
-        var existing = await _manager.LoadActiveByIdAsync(id);
-        if (existing is null)
+        if (row is null)
         {
             return null;
         }
 
-        _manager.ApplyUpdate(existing, input, updatedBy);
-        await _db.SaveChangesAsync();
-        return _manager.MapToOutput(existing);
+        return (new OutputGetAccount
+        {
+            ID_UserAccounts = row.ID_UserAccounts,
+            FK_Families = row.FK_Families,
+            Username = row.Username,
+            Email = row.Email,
+            IsActive = row.IsActive
+        }, row.PasswordHash);
     }
 
-    public Task<bool> ExistsByUsernameAsync(string username, long? excludeId = null)
+    public async Task<OutputGetAccount> CreateAsync(InputCreateAccount input, string createdBy)
     {
-        var query = _db.UserAccounts
-            .Where(a => a.Username == username && !a.IsCancelled);
+        await using var connection = (NpgsqlConnection)await _connections.CreateOpenConnectionAsync();
+        return await connection.QuerySingleAsync<OutputGetAccount>(
+            StoredProcedures.AccountRegister,
+            new
+            {
+                p_fk_families = input.FK_Families,
+                p_username = input.Username,
+                p_email = input.Email,
+                p_password_hash = input.PasswordHash,
+                p_is_active = input.IsActive,
+                p_created_by = createdBy
+            });
+    }
 
-        if (excludeId.HasValue)
-        {
-            query = query.Where(a => a.ID_UserAccounts != excludeId.Value);
-        }
+    public async Task<OutputGetAccount?> UpdateAsync(long id, InputUpdateAccount input, string updatedBy)
+    {
+        await using var connection = (NpgsqlConnection)await _connections.CreateOpenConnectionAsync();
+        return await connection.QuerySingleOrDefaultAsync<OutputGetAccount>(
+            StoredProcedures.AccountUpdate,
+            new
+            {
+                p_id = id,
+                p_username = input.Username,
+                p_email = input.Email,
+                p_password_hash = input.PasswordHash,
+                p_updated_by = updatedBy
+            });
+    }
 
-        return query.AnyAsync();
+    public async Task<bool> ExistsByUsernameAsync(string username, long? excludeId = null)
+    {
+        await using var connection = (NpgsqlConnection)await _connections.CreateOpenConnectionAsync();
+        return await connection.ExecuteScalarAsync<bool>(
+            StoredProcedures.AccountExistsByUsername,
+            new { p_username = username, p_exclude_id = excludeId });
+    }
+
+    private sealed class AccountLoginRow
+    {
+        public long ID_UserAccounts { get; set; }
+        public long FK_Families { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public string PasswordHash { get; set; } = string.Empty;
     }
 }

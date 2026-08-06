@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="MidnightApi.csproj" />
+  <Project Path="Database/Database.csproj" />
 </Solution>
