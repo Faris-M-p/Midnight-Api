@@ -13,6 +13,7 @@ public static class DatabaseInitializer
         var db = scope.ServiceProvider.GetRequiredService<DbConnectionClass>();
         await db.Database.EnsureCreatedAsync();
         await RemoveLegacyShadowForeignKeysAsync(db);
+        await EnsureMemberNicknameColumnAsync(db);
     }
 
     private static async Task EnsureDatabaseExistsAsync(string connectionString)
@@ -58,6 +59,13 @@ public static class DatabaseInitializer
             ALTER TABLE "MemberEvents" DROP COLUMN IF EXISTS "MemberID_Members" CASCADE;
             ALTER TABLE "MemberNotes" DROP COLUMN IF EXISTS "MemberID_Members" CASCADE;
             ALTER TABLE "MemberSocialLinks" DROP COLUMN IF EXISTS "MemberID_Members" CASCADE;
+            """);
+    }
+
+    private static async Task EnsureMemberNicknameColumnAsync(DbConnectionClass db)
+    {
+        await db.Database.ExecuteSqlRawAsync("""
+            ALTER TABLE "Members" ADD COLUMN IF NOT EXISTS "Nickname" character varying(100) NULL;
             """);
     }
 }

@@ -178,6 +178,7 @@ public class MembersRepositoryManager
         existing.DateOfBirth = input.DateOfBirth;
         existing.DateOfDeath = input.DateOfDeath;
         existing.IsRoot = input.IsRoot;
+        existing.Nickname = string.IsNullOrWhiteSpace(input.Nickname) ? null : input.Nickname.Trim();
         existing.Biography = input.Biography;
         existing.Profession = input.Profession;
         existing.UpdatedBy = updatedBy;
@@ -352,6 +353,7 @@ public class MembersRepositoryManager
             DateOfBirth = member.DateOfBirth,
             DateOfDeath = member.DateOfDeath,
             IsRoot = member.IsRoot,
+            Nickname = member.Nickname,
             Biography = member.Biography,
             Profession = member.Profession,
             Parent = Rel(member.Parent),
@@ -427,6 +429,7 @@ public class MembersRepositoryManager
         DateOfBirth = m.DateOfBirth,
         DateOfDeath = m.DateOfDeath,
         IsRoot = m.IsRoot,
+        Nickname = m.Nickname,
         PhotoUrl = m.Images.Where(i => !i.IsCancelled)
             .OrderByDescending(i => i.IsPrimary)
             .ThenBy(i => i.SortOrder)
@@ -448,6 +451,7 @@ public class MembersRepositoryManager
         DateOfBirth = input.DateOfBirth,
         DateOfDeath = input.DateOfDeath,
         IsRoot = input.IsRoot,
+        Nickname = string.IsNullOrWhiteSpace(input.Nickname) ? null : input.Nickname.Trim(),
         Biography = input.Biography,
         Profession = input.Profession,
         CreatedBy = createdBy,
@@ -684,6 +688,7 @@ public class MembersRepositoryManager
         DateOfBirth = m.DateOfBirth,
         DateOfDeath = m.DateOfDeath,
         IsRoot = m.IsRoot,
+        Nickname = m.Nickname,
         PhotoUrl = m.Images.Where(i => !i.IsCancelled)
             .OrderByDescending(i => i.IsPrimary)
             .ThenBy(i => i.SortOrder)

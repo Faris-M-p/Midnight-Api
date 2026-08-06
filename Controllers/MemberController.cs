@@ -40,6 +40,21 @@ public class MemberController : ControllerBase
         });
     }
 
+    [HttpGet("tree")]
+    public async Task<IActionResult> GetTree()
+    {
+        var data = await _members.GetTreeAsync(User.GetFamilyId());
+
+        return Ok(new ApiResponse<OutputFamilyTree>
+        {
+            Success = true,
+            StatusCode = StatusCodes.Status200OK,
+            Message = "Success.",
+            Data = data,
+            TraceId = HttpContext.TraceIdentifier
+        });
+    }
+
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetById([FromRoute] InputMemberRouteRequest request)
     {

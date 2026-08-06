@@ -30,6 +30,9 @@ public class Member : AuditableEntity
     public DateOnly? DateOfDeath { get; set; }
     public bool IsRoot { get; set; }
 
+    [MaxLength(100)]
+    public string? Nickname { get; set; }
+
     [MaxLength(4000)]
     public string? Biography { get; set; }
 

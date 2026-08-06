@@ -118,6 +118,7 @@ public class OutputMemberProfile
     public DateOnly? DateOfBirth { get; set; }
     public DateOnly? DateOfDeath { get; set; }
     public bool IsRoot { get; set; }
+    public string? Nickname { get; set; }
     public string? Biography { get; set; }
     public string? Profession { get; set; }
     public MemberRelationSummary? Parent { get; set; }
@@ -168,6 +169,12 @@ public abstract class InputMemberSaveBase
     public DateOnly? DateOfDeath { get; set; }
 
     public bool IsRoot { get; set; }
+
+    [Display(Name = "Nickname")]
+    [StringLength(100)]
+    [TrimmedString]
+    [NoScriptTags]
+    public string? Nickname { get; set; }
 
     [StringLength(4000)]
     [NoScriptTags]
@@ -343,6 +350,7 @@ public class OutputTreeNode
     public DateOnly? DateOfBirth { get; set; }
     public DateOnly? DateOfDeath { get; set; }
     public bool IsRoot { get; set; }
+    public string? Nickname { get; set; }
     public string? PhotoUrl { get; set; }
     public OutputTreeNode? Spouse { get; set; }
     public List<OutputTreeNode> Children { get; set; } = [];

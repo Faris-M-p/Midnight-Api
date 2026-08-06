@@ -75,6 +75,36 @@ public class MembersRepository : IMembersRepository
         };
     }
 
+    public async Task<OutputFamilyTree> GetTreeAsync(long familyId)
+    {
+        var root = await _db.Members
+            .Where(m => m.FK_Families == familyId && m.IsRoot && !m.IsCancelled)
+            .Include(m => m.Images.Where(i => !i.IsCancelled))
+            .FirstOrDefaultAsync();
+
+        var totalMembers = await _db.Members
+            .Where(m => m.FK_Families == familyId && !m.IsCancelled)
+            .CountAsync();
+
+        if (root is null)
+        {
+            return new OutputFamilyTree
+            {
+                Root = null,
+                TotalMembers = totalMembers
+            };
+        }
+
+        await _manager.LoadSpouseDetailsAsync(root);
+        await _manager.LoadChildrenRecursiveAsync(root);
+
+        return new OutputFamilyTree
+        {
+            Root = _manager.MapToTreeNode(root),
+            TotalMembers = totalMembers
+        };
+    }
+
     public async Task<OutputMemberProfile?> GetProfileAsync(long familyId, long memberId)
     {
         var member = await _manager.LoadProfileEntityAsync(familyId, memberId);
@@ -147,6 +177,17 @@ public class MembersRepository : IMembersRepository
         if (existing is null)
         {
             return false;
+        }
+
+        // Block delete when this member still has living (non-cancelled) children
+        var hasChildren = await _db.Members.AnyAsync(m =>
+            m.FK_Members_Parent == memberId
+            && m.FK_Families == familyId
+            && !m.IsCancelled);
+        if (hasChildren)
+        {
+            throw new BadRequestException(
+                "Cannot delete this member because they have children. Remove or reassign children first.");
         }
 
         if (existing.FK_Members_Spouse.HasValue)
@@ -341,6 +382,7 @@ public class MembersRepository : IMembersRepository
             DateOfBirth = member.DateOfBirth,
             DateOfDeath = member.DateOfDeath,
             IsRoot = member.IsRoot,
+            Nickname = member.Nickname,
             Biography = member.Biography,
             Profession = member.Profession,
             Addresses = input.Addresses?.Select(a => new MemberAddressItem

@@ -5,6 +5,7 @@ using MidnightApi.Models.Api;
 public interface IMembersRepository
 {
     Task<OutputPagedMembers> GetListAsync(long familyId, InputMemberListQuery query);
+    Task<OutputFamilyTree> GetTreeAsync(long familyId);
     Task<OutputMemberProfile?> GetProfileAsync(long familyId, long memberId);
     Task<OutputMemberProfile> CreateAsync(long familyId, InputCreateMember input, string createdBy);
     Task<OutputMemberProfile?> UpdateAsync(long familyId, long memberId, InputUpdateMember input, string updatedBy);
