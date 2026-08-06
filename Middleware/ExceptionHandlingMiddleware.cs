@@ -1,6 +1,6 @@
 using System.Text.Json;
 using MidnightApi.Exceptions;
-using MidnightApi.Models.Api;
+using MidnightApi.Models;
 using Npgsql;
 
 namespace MidnightApi.Middleware;

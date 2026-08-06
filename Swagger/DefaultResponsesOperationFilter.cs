@@ -1,5 +1,5 @@
 using Microsoft.OpenApi;
-using MidnightApi.Models.Api;
+using MidnightApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace MidnightApi.Swagger;

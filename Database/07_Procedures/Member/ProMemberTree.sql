@@ -2,50 +2,40 @@ CREATE OR REPLACE FUNCTION "ProMemberTree"(
     p_family_id BIGINT
 )
 RETURNS TABLE (
-    "Id"              BIGINT,
-    "FirstName"       VARCHAR,
-    "LastName"        VARCHAR,
-    "FullName"        TEXT,
-    "Gender"          VARCHAR,
-    "DateOfBirth"     DATE,
-    "DateOfDeath"     DATE,
-    "IsRoot"          BOOLEAN,
-    "Nickname"        VARCHAR,
-    "PhotoUrl"        VARCHAR,
-    "ParentId"        BIGINT,
-    "SpouseId"        BIGINT,
-    "TotalMembers"    INTEGER
+    "Payload" JSONB
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
-    SELECT
-        m."ID_Members",
-        m."FirstName",
-        m."LastName",
-        (m."FirstName" || ' ' || m."LastName"),
-        m."Gender",
-        m."DateOfBirth",
-        m."DateOfDeath",
-        m."IsRoot",
-        m."Nickname",
-        (
-            SELECT i."ImageUrl"
-            FROM "MemberImages" i
-            WHERE i."FK_Members" = m."ID_Members"
-              AND i."IsCancelled" = FALSE
-            ORDER BY i."IsPrimary" DESC, i."SortOrder" ASC
-            LIMIT 1
-        ),
-        m."FK_Members_Parent",
-        m."FK_Members_Spouse",
-        (
-            SELECT COUNT(*)::INTEGER
-            FROM "Members" t
-            WHERE t."FK_Families" = p_family_id
-              AND t."IsCancelled" = FALSE
-        )
+DECLARE
+    v_root_id BIGINT;
+    v_total INTEGER;
+    v_root JSONB;
+BEGIN
+    SELECT COUNT(*)::INTEGER INTO v_total
     FROM "Members" m
     WHERE m."FK_Families" = p_family_id
+      AND m."IsCancelled" = FALSE;
+
+    SELECT m."ID_Members" INTO v_root_id
+    FROM "Members" m
+    WHERE m."FK_Families" = p_family_id
+      AND m."IsRoot" = TRUE
       AND m."IsCancelled" = FALSE
-    ORDER BY m."IsRoot" DESC, m."ID_Members";
+    LIMIT 1;
+
+    IF v_root_id IS NULL THEN
+        RETURN QUERY SELECT jsonb_build_object(
+            'Root', NULL,
+            'TotalMembers', v_total
+        );
+        RETURN;
+    END IF;
+
+    v_root := "FnBuildTreeNode"(v_root_id, TRUE);
+
+    RETURN QUERY SELECT jsonb_build_object(
+        'Root', v_root,
+        'TotalMembers', v_total
+    );
+END;
 $$;

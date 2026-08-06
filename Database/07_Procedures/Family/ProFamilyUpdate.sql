@@ -5,14 +5,23 @@ CREATE OR REPLACE FUNCTION "ProFamilyUpdate"(
     p_updated_by   VARCHAR
 )
 RETURNS TABLE (
-    "ID_Families" BIGINT,
-    "FamilyCode"  VARCHAR,
-    "FamilyName"  VARCHAR,
-    "Description" VARCHAR
+    "ResponseCode"    INTEGER,
+    "StatusCode"      INTEGER,
+    "ResponseMessage" VARCHAR
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM "Families" f
+        WHERE f."ID_Families" = p_id
+          AND f."IsCancelled" = FALSE
+    ) THEN
+        RETURN QUERY SELECT 1, 404, 'Family not found.'::VARCHAR;
+        RETURN;
+    END IF;
+
     UPDATE "Families" f
     SET "FamilyName" = p_family_name,
         "Description" = p_description,
@@ -21,10 +30,6 @@ BEGIN
     WHERE f."ID_Families" = p_id
       AND f."IsCancelled" = FALSE;
 
-    RETURN QUERY
-    SELECT f."ID_Families", f."FamilyCode", f."FamilyName", f."Description"
-    FROM "Families" f
-    WHERE f."ID_Families" = p_id
-      AND f."IsCancelled" = FALSE;
+    RETURN QUERY SELECT 0, 200, 'Family updated successfully.'::VARCHAR;
 END;
 $$;

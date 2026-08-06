@@ -3,7 +3,11 @@ CREATE OR REPLACE FUNCTION "ProMemberDelete"(
     p_member_id BIGINT,
     p_deleted_by VARCHAR
 )
-RETURNS INTEGER
+RETURNS TABLE (
+    "ResponseCode"    INTEGER,
+    "StatusCode"      INTEGER,
+    "ResponseMessage" VARCHAR
+)
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -15,7 +19,8 @@ BEGIN
           AND "FK_Families" = p_family_id
           AND "IsCancelled" = FALSE
     ) THEN
-        RETURN 0; -- not found
+        RETURN QUERY SELECT 1, 404, 'Member not found.'::VARCHAR;
+        RETURN;
     END IF;
 
     IF EXISTS (
@@ -24,7 +29,8 @@ BEGIN
           AND "FK_Families" = p_family_id
           AND "IsCancelled" = FALSE
     ) THEN
-        RETURN -1; -- has children
+        RETURN QUERY SELECT 2, 400, 'Cannot delete this member because they have children. Remove or reassign children first.'::VARCHAR;
+        RETURN;
     END IF;
 
     SELECT "FK_Members_Spouse" INTO v_spouse_id
@@ -47,6 +53,6 @@ BEGIN
         "CancelledOn" = NOW()
     WHERE "ID_Members" = p_member_id;
 
-    RETURN 1; -- success
+    RETURN QUERY SELECT 0, 200, 'Member deleted successfully.'::VARCHAR;
 END;
 $$;

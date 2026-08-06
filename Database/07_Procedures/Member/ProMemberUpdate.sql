@@ -21,21 +21,38 @@ CREATE OR REPLACE FUNCTION "ProMemberUpdate"(
     p_social_links JSONB,
     p_updated_by   VARCHAR
 )
-RETURNS BOOLEAN
+RETURNS TABLE (
+    "ResponseCode"    INTEGER,
+    "StatusCode"      INTEGER,
+    "ResponseMessage" VARCHAR
+)
 LANGUAGE plpgsql
 AS $$
 DECLARE
     v_item JSONB;
     v_keep BIGINT[];
     v_id BIGINT;
+    v_code INTEGER;
+    v_status INTEGER;
+    v_message VARCHAR;
 BEGIN
+    SELECT v."ResponseCode", v."StatusCode", v."ResponseMessage"
+    INTO v_code, v_status, v_message
+    FROM "FnMemberValidateSave"(p_family_id, p_member_id, p_parent_id, p_spouse_id, p_is_root) v;
+
+    IF v_code <> 0 THEN
+        RETURN QUERY SELECT v_code, v_status, v_message;
+        RETURN;
+    END IF;
+
     IF NOT EXISTS (
         SELECT 1 FROM "Members"
         WHERE "ID_Members" = p_member_id
           AND "FK_Families" = p_family_id
           AND "IsCancelled" = FALSE
     ) THEN
-        RETURN FALSE;
+        RETURN QUERY SELECT 1, 404, 'Member not found.'::VARCHAR;
+        RETURN;
     END IF;
 
     UPDATE "Members"
@@ -314,6 +331,6 @@ BEGIN
           AND "IsCancelled" = FALSE;
     END IF;
 
-    RETURN TRUE;
+    RETURN QUERY SELECT 0, 200, 'Member updated successfully.'::VARCHAR;
 END;
 $$;

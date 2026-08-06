@@ -1,7 +1,10 @@
 using System.ComponentModel.DataAnnotations;
+using MidnightApi.DataAccess;
 using MidnightApi.Validation.CustomModelValidation;
 
-namespace MidnightApi.Models.Api;
+namespace MidnightApi.Models;
+
+// --- Frontend / API views ---
 
 public class InputRegisterAccountView
 {
@@ -66,40 +69,63 @@ public class InputUpdateAccountView
     public string? Password { get; set; }
 }
 
-public class InputCreateAccount
-{
-    [GreaterThanZero]
-    public long FK_Families { get; set; }
+// --- DB input models ---
 
-    [Required, MinLength(3), StringLength(100)]
-    [TrimmedString]
-    [NoScriptTags]
+public class InputGetAccount
+{
+    [DbParam("p_id")]
+    public long Id { get; set; }
+}
+
+public class InputLoginAccount
+{
+    [DbParam("p_username")]
+    public string Username { get; set; } = string.Empty;
+}
+
+public class InputRegisterAccount
+{
+    [DbParam("p_family_code")]
+    public string FamilyCode { get; set; } = string.Empty;
+
+    [DbParam("p_family_name")]
+    public string FamilyName { get; set; } = string.Empty;
+
+    [DbParam("p_description")]
+    public string? Description { get; set; }
+
+    [DbParam("p_username")]
     public string Username { get; set; } = string.Empty;
 
-    [Required, EmailAddress, StringLength(256)]
-    [TrimmedString]
+    [DbParam("p_email")]
     public string Email { get; set; } = string.Empty;
 
-    [Required, MinLength(10), StringLength(500)]
+    [DbParam("p_password_hash")]
     public string PasswordHash { get; set; } = string.Empty;
 
-    public bool IsActive { get; set; } = true;
+    [DbParam("p_created_by")]
+    public string CreatedBy { get; set; } = string.Empty;
 }
 
 public class InputUpdateAccount
 {
-    [Required, MinLength(3), StringLength(100)]
-    [TrimmedString]
-    [NoScriptTags]
+    [DbParam("p_id")]
+    public long Id { get; set; }
+
+    [DbParam("p_username")]
     public string Username { get; set; } = string.Empty;
 
-    [Required, EmailAddress, StringLength(256)]
-    [TrimmedString]
+    [DbParam("p_email")]
     public string Email { get; set; } = string.Empty;
 
-    [MinLength(10), StringLength(500)]
+    [DbParam("p_password_hash")]
     public string? PasswordHash { get; set; }
+
+    [DbParam("p_updated_by")]
+    public string UpdatedBy { get; set; } = string.Empty;
 }
+
+// --- Output models ---
 
 public class OutputGetAccount
 {
@@ -108,6 +134,29 @@ public class OutputGetAccount
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public bool IsActive { get; set; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string PasswordHash { get; set; } = string.Empty;
+}
+
+public class OutputLoginAccount
+{
+    public long ID_UserAccounts { get; set; }
+    public long FK_Families { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string PasswordHash { get; set; } = string.Empty;
+}
+
+public class OutputRegister : CommonResponse
+{
+}
+
+public class OutputUpdateAccount : CommonResponse
+{
 }
 
 public class OutputLogin
@@ -115,11 +164,4 @@ public class OutputLogin
     public string AccessToken { get; set; } = string.Empty;
     public DateTime ExpiresAtUtc { get; set; }
     public string TokenType { get; set; } = "Bearer";
-}
-
-public class OutputRegister
-{
-    public long AccountId { get; set; }
-    public long FamilyId { get; set; }
-    public string Username { get; set; } = string.Empty;
 }

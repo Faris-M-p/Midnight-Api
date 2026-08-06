@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using MidnightApi.Auth;
 using MidnightApi.Data;
+using MidnightApi.DataAccess;
 using MidnightApi.Filters;
 using MidnightApi.Interfaces;
 using MidnightApi.Middleware;
-using MidnightApi.Auth;
 using MidnightApi.Repositories;
 using MidnightApi.Services;
 using MidnightApi.Swagger;
@@ -29,11 +30,10 @@ builder.Services.AddCors(options =>
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("DefaultConnection is missing in appsettings.");
 
-builder.Services.AddSingleton<IDbConnectionFactory>(_ => new NpgsqlConnectionFactory(connectionString));
+builder.Services.AddScoped<IDataAccessDapper, DataAccessDapper>();
 builder.Services.AddScoped<IFamiliesRepository, FamiliesRepository>();
 builder.Services.AddScoped<IMembersRepository, MembersRepository>();
 builder.Services.AddScoped<IUserAccountsRepository, UserAccountsRepository>();
-builder.Services.AddSingleton<MemberValidationService>();
 builder.Services.AddSingleton<CommonService>();
 builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddSingleton<JwtTokenService>();

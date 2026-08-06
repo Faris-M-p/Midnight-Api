@@ -2,7 +2,7 @@ using System.Collections;
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using MidnightApi.Models.Api;
+using MidnightApi.Models;
 
 namespace MidnightApi.Filters;
 

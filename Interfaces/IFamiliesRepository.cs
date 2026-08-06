@@ -1,11 +1,10 @@
 namespace MidnightApi.Interfaces;
 
-using MidnightApi.Models.Api;
+using MidnightApi.Models;
 
 public interface IFamiliesRepository
 {
-    Task<OutputGetFamily?> GetByIdAsync(long id);
-    Task<OutputGetFamily> CreateAsync(InputCreateFamily input, string createdBy);
-    Task<OutputGetFamily?> UpdateAsync(long id, InputUpdateFamily input, string updatedBy);
-    Task<bool> ExistsByCodeAsync(string code, long? excludeFamilyId = null);
+    Task<OutputGetFamily?> GetByIdAsync(InputGetFamily input);
+    Task<OutputCreateFamily> CreateAsync(InputCreateFamily input);
+    Task<OutputUpdateFamily> UpdateAsync(InputUpdateFamily input);
 }

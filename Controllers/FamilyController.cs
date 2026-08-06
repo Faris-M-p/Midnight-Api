@@ -3,8 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using MidnightApi.Auth;
 using MidnightApi.Exceptions;
 using MidnightApi.Interfaces;
-using MidnightApi.Models.Api;
+using MidnightApi.Models;
 using MidnightApi.Services;
+using Npgsql;
 
 namespace MidnightApi.Controllers;
 
@@ -18,7 +19,10 @@ public class FamilyController : ControllerBase
     private readonly IMembersRepository _members;
     private readonly CommonService _commonService;
 
-    public FamilyController(IFamiliesRepository families, IMembersRepository members, CommonService commonService)
+    public FamilyController(
+        IFamiliesRepository families,
+        IMembersRepository members,
+        CommonService commonService)
     {
         _families = families;
         _members = members;
@@ -30,7 +34,7 @@ public class FamilyController : ControllerBase
     {
         _commonService.ValidateModelState(ModelState);
 
-        var family = await _families.GetByIdAsync(User.GetFamilyId())
+        var family = await _families.GetByIdAsync(new InputGetFamily { Id = User.GetFamilyId() })
             ?? throw new NotFoundException("Family not found.");
 
         return Ok(new ApiResponse<OutputGetFamily>
@@ -48,21 +52,15 @@ public class FamilyController : ControllerBase
     {
         _commonService.ValidateModelState(ModelState);
 
-        var updated = await _families.UpdateAsync(User.GetFamilyId(), new InputUpdateFamily
+        var result = await _families.UpdateAsync(new InputUpdateFamily
         {
+            Id = User.GetFamilyId(),
             FamilyName = request.FamilyName.Trim(),
-            Description = request.Description
-        }, User.GetUsername())
-            ?? throw new NotFoundException("Family not found.");
-
-        return Ok(new ApiResponse<OutputGetFamily>
-        {
-            Success = true,
-            StatusCode = StatusCodes.Status200OK,
-            Message = "Family updated successfully.",
-            Data = updated,
-            TraceId = HttpContext.TraceIdentifier
+            Description = request.Description,
+            UpdatedBy = User.GetUsername()
         });
+
+        return _commonService.ToActionResult(result, HttpContext.TraceIdentifier);
     }
 
     [HttpGet("dashboard")]
@@ -70,14 +68,25 @@ public class FamilyController : ControllerBase
     {
         _commonService.ValidateModelState(ModelState);
 
-        var data = await _members.GetDashboardAsync(User.GetFamilyId());
+        OutputDashboard? data;
+        try
+        {
+            data = await _members.GetDashboardAsync(new InputMemberDashboard
+            {
+                FamilyId = User.GetFamilyId()
+            });
+        }
+        catch (PostgresException ex) when (ex.MessageText.Contains("Family not found", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new NotFoundException("Family not found.");
+        }
 
         return Ok(new ApiResponse<OutputDashboard>
         {
             Success = true,
             StatusCode = StatusCodes.Status200OK,
             Message = "Success.",
-            Data = data,
+            Data = data ?? throw new NotFoundException("Family not found."),
             TraceId = HttpContext.TraceIdentifier
         });
     }
@@ -87,7 +96,10 @@ public class FamilyController : ControllerBase
     {
         _commonService.ValidateModelState(ModelState);
 
-        var data = await _members.GetTimelineAsync(User.GetFamilyId());
+        var data = await _members.GetTimelineAsync(new InputMemberTimeline
+        {
+            FamilyId = User.GetFamilyId()
+        });
 
         return Ok(new ApiResponse<List<OutputTimelineItem>>
         {

@@ -35,19 +35,13 @@ A **React frontend** is planned as a separate layer that will consume these APIs
 ## Architecture
 
 ```
-Controllers → Repositories → Dapper → Stored Procedures → PostgreSQL
+Controller → Repository Interface → Repository → IDataAccessDapper → DataAccessDapper → PostgreSQL
 ```
 
-- **3 controllers** keep the API surface simple:
-  - `FamilyController` — family records
-  - `MemberController` — members, tree logic, and all member sub-resources
-  - `AccountController` — login accounts linked to families
+- Controllers call repository interfaces directly
+- Repositories call stored procedures through DataAccess
+- Same API models are used for SP input/output
 
-- **Repositories** only call stored procedures via Dapper. Business validation stays in services.
-
-- **Soft delete** — `DELETE` endpoints set `IsCancelled = true` instead of removing rows.
-
-- **Database project** — `Database/` holds tables, functions, views, indexes, procedures, and seed scripts. Use `InstallDatabase.bat` / `PatchDatabase.bat`, or let startup apply schema when tables are missing.
 
 ---
 
@@ -93,19 +87,18 @@ MidnightApi/
 │   ├── FamilyController.cs      # /api/families
 │   ├── MemberController.cs      # /api/members (+ sub-resources)
 │   └── AccountController.cs     # /api/accounts
+├── DataAccess/
+│   ├── IDataAccessDapper.cs
+│   └── DataAccessDapper.cs
 ├── Data/
-│   ├── IDbConnectionFactory.cs
-│   ├── NpgsqlConnectionFactory.cs
 │   ├── StoredProcedures.cs
-│   ├── DapperExtensions.cs
-│   └── DatabaseInitializer.cs   # Ensure DB + apply SQL schema
-├── Database/                    # SQL-first schema (tables, views, SPs, patches)
-├── Interfaces/                  # Repository contracts
+│   ├── SchemaBootstrap.cs
+│   └── DatabaseInitializer.cs
+├── Database/                    # SQL schema + procedures
+├── Repositories/                # Thin SP repositories
+├── Interfaces/
 ├── Models/
-│   └── Api/                     # Input, Output, and View models
-├── Repositories/                # Dapper → stored procedure calls only
 ├── Services/
-│   └── MemberValidationService.cs
 ├── Program.cs
 └── appsettings.json
 ```

@@ -2,18 +2,14 @@ CREATE OR REPLACE FUNCTION "ProMemberDashboard"(
     p_family_id BIGINT
 )
 RETURNS TABLE (
-    "FamilyJson"            JSONB,
-    "TotalMembers"          INTEGER,
-    "TotalGenerations"      INTEGER,
-    "RecentMembersJson"     JSONB,
-    "MembersForBirthdayJson" JSONB,
-    "StatsJson"             JSONB
+    "Payload" JSONB
 )
 LANGUAGE plpgsql
 AS $$
 DECLARE
     v_root_id BIGINT;
     v_gens INTEGER := 0;
+    v_today DATE := CURRENT_DATE;
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM "Families"
@@ -45,8 +41,8 @@ BEGIN
     END IF;
 
     RETURN QUERY
-    SELECT
-        (
+    SELECT jsonb_build_object(
+        'Family', (
             SELECT jsonb_build_object(
                 'ID_Families', f."ID_Families",
                 'FamilyCode', f."FamilyCode",
@@ -56,13 +52,13 @@ BEGIN
             FROM "Families" f
             WHERE f."ID_Families" = p_family_id
         ),
-        (
+        'TotalMembers', (
             SELECT COUNT(*)::INTEGER
             FROM "Members" m
             WHERE m."FK_Families" = p_family_id AND m."IsCancelled" = FALSE
         ),
-        v_gens,
-        COALESCE((
+        'TotalGenerations', v_gens,
+        'RecentMembers', COALESCE((
             SELECT jsonb_agg(row_to_json(x)::jsonb)
             FROM (
                 SELECT
@@ -87,21 +83,75 @@ BEGIN
                 LIMIT 5
             ) x
         ), '[]'::jsonb),
-        COALESCE((
-            SELECT jsonb_agg(row_to_json(b)::jsonb)
+        'UpcomingBirthdays', COALESCE((
+            SELECT jsonb_agg(
+                jsonb_build_object(
+                    'MemberId', b."MemberId",
+                    'FullName', b."FullName",
+                    'DateOfBirth', b."DateOfBirth",
+                    'TurningAge', b."TurningAge",
+                    'DaysUntil', b."DaysUntil"
+                )
+                ORDER BY b."DaysUntil"
+            )
             FROM (
                 SELECT
                     m."ID_Members" AS "MemberId",
                     (m."FirstName" || ' ' || m."LastName") AS "FullName",
-                    m."DateOfBirth"
+                    m."DateOfBirth",
+                    (EXTRACT(YEAR FROM age(nb.next_bday, m."DateOfBirth")))::INTEGER AS "TurningAge",
+                    (nb.next_bday - v_today) AS "DaysUntil"
                 FROM "Members" m
+                CROSS JOIN LATERAL (
+                    SELECT
+                        CASE
+                            WHEN make_date(
+                                EXTRACT(YEAR FROM v_today)::INT,
+                                EXTRACT(MONTH FROM m."DateOfBirth")::INT,
+                                LEAST(
+                                    EXTRACT(DAY FROM m."DateOfBirth")::INT,
+                                    EXTRACT(DAY FROM (DATE_TRUNC('month', make_date(
+                                        EXTRACT(YEAR FROM v_today)::INT,
+                                        EXTRACT(MONTH FROM m."DateOfBirth")::INT,
+                                        1
+                                    )) + INTERVAL '1 month - 1 day'))::INT
+                                )
+                            ) < v_today
+                            THEN make_date(
+                                EXTRACT(YEAR FROM v_today)::INT + 1,
+                                EXTRACT(MONTH FROM m."DateOfBirth")::INT,
+                                LEAST(
+                                    EXTRACT(DAY FROM m."DateOfBirth")::INT,
+                                    EXTRACT(DAY FROM (DATE_TRUNC('month', make_date(
+                                        EXTRACT(YEAR FROM v_today)::INT + 1,
+                                        EXTRACT(MONTH FROM m."DateOfBirth")::INT,
+                                        1
+                                    )) + INTERVAL '1 month - 1 day'))::INT
+                                )
+                            )
+                            ELSE make_date(
+                                EXTRACT(YEAR FROM v_today)::INT,
+                                EXTRACT(MONTH FROM m."DateOfBirth")::INT,
+                                LEAST(
+                                    EXTRACT(DAY FROM m."DateOfBirth")::INT,
+                                    EXTRACT(DAY FROM (DATE_TRUNC('month', make_date(
+                                        EXTRACT(YEAR FROM v_today)::INT,
+                                        EXTRACT(MONTH FROM m."DateOfBirth")::INT,
+                                        1
+                                    )) + INTERVAL '1 month - 1 day'))::INT
+                                )
+                            )
+                        END AS next_bday
+                ) nb
                 WHERE m."FK_Families" = p_family_id
                   AND m."IsCancelled" = FALSE
                   AND m."DateOfBirth" IS NOT NULL
                   AND m."DateOfDeath" IS NULL
+                ORDER BY nb.next_bday
+                LIMIT 5
             ) b
         ), '[]'::jsonb),
-        (
+        'Stats', (
             SELECT jsonb_build_object(
                 'MaleCount', COUNT(*) FILTER (WHERE LOWER(COALESCE(m."Gender", '')) = 'male'),
                 'FemaleCount', COUNT(*) FILTER (WHERE LOWER(COALESCE(m."Gender", '')) = 'female'),
@@ -113,6 +163,7 @@ BEGIN
             )
             FROM "Members" m
             WHERE m."FK_Families" = p_family_id AND m."IsCancelled" = FALSE
-        );
+        )
+    );
 END;
 $$;

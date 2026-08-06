@@ -8,16 +8,7 @@ CREATE OR REPLACE FUNCTION "ProMemberList"(
     p_page_size INTEGER DEFAULT 20
 )
 RETURNS TABLE (
-    "Id"           BIGINT,
-    "FirstName"    VARCHAR,
-    "LastName"     VARCHAR,
-    "FullName"     TEXT,
-    "Gender"       VARCHAR,
-    "DateOfBirth"  DATE,
-    "IsRoot"       BOOLEAN,
-    "Profession"   VARCHAR,
-    "PhotoUrl"     VARCHAR,
-    "TotalCount"   BIGINT
+    "Payload" JSONB
 )
 LANGUAGE plpgsql
 AS $$
@@ -26,8 +17,37 @@ DECLARE
     v_size INTEGER := LEAST(GREATEST(COALESCE(p_page_size, 20), 1), 100);
     v_term TEXT := NULLIF(LOWER(TRIM(COALESCE(p_search, ''))), '');
     v_sort TEXT := LOWER(COALESCE(p_sort_by, 'firstname'));
+    v_total BIGINT;
+    v_items JSONB;
 BEGIN
-    RETURN QUERY
+    WITH filtered AS (
+        SELECT
+            m."ID_Members",
+            m."FirstName",
+            m."LastName",
+            m."Gender",
+            m."DateOfBirth",
+            m."IsRoot",
+            m."Profession",
+            (
+                SELECT i."ImageUrl"
+                FROM "MemberImages" i
+                WHERE i."FK_Members" = m."ID_Members"
+                  AND i."IsCancelled" = FALSE
+                ORDER BY i."IsPrimary" DESC, i."SortOrder" ASC
+                LIMIT 1
+            ) AS photo
+        FROM "Members" m
+        WHERE m."FK_Families" = p_family_id
+          AND m."IsCancelled" = FALSE
+          AND (v_term IS NULL
+               OR LOWER(m."FirstName") LIKE '%' || v_term || '%'
+               OR LOWER(m."LastName") LIKE '%' || v_term || '%'
+               OR LOWER(m."FirstName" || ' ' || m."LastName") LIKE '%' || v_term || '%')
+          AND (p_gender IS NULL OR p_gender = '' OR m."Gender" = p_gender)
+    )
+    SELECT COUNT(*) INTO v_total FROM filtered;
+
     WITH filtered AS (
         SELECT
             m."ID_Members",
@@ -54,9 +74,6 @@ BEGIN
                OR LOWER(m."FirstName" || ' ' || m."LastName") LIKE '%' || v_term || '%')
           AND (p_gender IS NULL OR p_gender = '' OR m."Gender" = p_gender)
     ),
-    counted AS (
-        SELECT COUNT(*)::BIGINT AS total FROM filtered
-    ),
     ordered AS (
         SELECT f.*
         FROM filtered f
@@ -74,18 +91,28 @@ BEGIN
         OFFSET (v_page - 1) * v_size
         LIMIT v_size
     )
-    SELECT
-        o."ID_Members",
-        o."FirstName",
-        o."LastName",
-        (o."FirstName" || ' ' || o."LastName"),
-        o."Gender",
-        o."DateOfBirth",
-        o."IsRoot",
-        o."Profession",
-        o.photo,
-        c.total
-    FROM ordered o
-    CROSS JOIN counted c;
+    SELECT COALESCE(jsonb_agg(
+        jsonb_build_object(
+            'Id', o."ID_Members",
+            'FirstName', o."FirstName",
+            'LastName', o."LastName",
+            'FullName', o."FirstName" || ' ' || o."LastName",
+            'Gender', o."Gender",
+            'DateOfBirth', o."DateOfBirth",
+            'IsRoot', o."IsRoot",
+            'Profession', o."Profession",
+            'PhotoUrl', o.photo
+        )
+    ), '[]'::jsonb)
+    INTO v_items
+    FROM ordered o;
+
+    RETURN QUERY SELECT jsonb_build_object(
+        'Items', v_items,
+        'Page', v_page,
+        'PageSize', v_size,
+        'TotalCount', v_total,
+        'TotalPages', CASE WHEN v_total = 0 THEN 0 ELSE CEIL(v_total::NUMERIC / v_size)::INTEGER END
+    );
 END;
 $$;

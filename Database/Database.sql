@@ -15,6 +15,9 @@
 \echo '=== 02_Functions ==='
 \i 02_Functions/FnGetGeneration.sql
 \i 02_Functions/FnGetRelationship.sql
+\i 02_Functions/FnMemberValidateSave.sql
+\i 02_Functions/FnMemberValidateMapSpouse.sql
+\i 02_Functions/FnBuildTreeNode.sql
 
 \echo '=== 03_Types ==='
 \i 03_Types/EventType.sql

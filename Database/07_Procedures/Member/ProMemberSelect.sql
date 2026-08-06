@@ -3,47 +3,27 @@ CREATE OR REPLACE FUNCTION "ProMemberSelect"(
     p_member_id BIGINT
 )
 RETURNS TABLE (
-    "Id"           BIGINT,
-    "FirstName"    VARCHAR,
-    "LastName"     VARCHAR,
-    "FullName"     TEXT,
-    "Email"        VARCHAR,
-    "Phone"        VARCHAR,
-    "Gender"       VARCHAR,
-    "DateOfBirth"  DATE,
-    "DateOfDeath"  DATE,
-    "IsRoot"       BOOLEAN,
-    "Nickname"     VARCHAR,
-    "Biography"    VARCHAR,
-    "Profession"   VARCHAR,
-    "ParentJson"   JSONB,
-    "SpouseJson"   JSONB,
-    "ChildrenJson" JSONB,
-    "AddressesJson" JSONB,
-    "ImagesJson"   JSONB,
-    "EventsJson"   JSONB,
-    "NotesJson"    JSONB,
-    "SocialLinksJson" JSONB
+    "Payload" JSONB
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
     RETURN QUERY
-    SELECT
-        m."ID_Members",
-        m."FirstName",
-        m."LastName",
-        (m."FirstName" || ' ' || m."LastName"),
-        m."Email",
-        m."Phone",
-        m."Gender",
-        m."DateOfBirth",
-        m."DateOfDeath",
-        m."IsRoot",
-        m."Nickname",
-        m."Biography",
-        m."Profession",
-        (
+    SELECT jsonb_build_object(
+        'Id', m."ID_Members",
+        'FirstName', m."FirstName",
+        'LastName', m."LastName",
+        'FullName', m."FirstName" || ' ' || m."LastName",
+        'Email', m."Email",
+        'Phone', m."Phone",
+        'Gender', m."Gender",
+        'DateOfBirth', m."DateOfBirth",
+        'DateOfDeath', m."DateOfDeath",
+        'IsRoot', m."IsRoot",
+        'Nickname', m."Nickname",
+        'Biography', m."Biography",
+        'Profession', m."Profession",
+        'Parent', (
             SELECT jsonb_build_object(
                 'Id', p."ID_Members",
                 'FirstName', p."FirstName",
@@ -63,7 +43,7 @@ BEGIN
             WHERE p."ID_Members" = m."FK_Members_Parent"
               AND p."IsCancelled" = FALSE
         ),
-        (
+        'Spouse', (
             SELECT jsonb_build_object(
                 'Id', s."ID_Members",
                 'FirstName', s."FirstName",
@@ -83,7 +63,7 @@ BEGIN
             WHERE s."ID_Members" = m."FK_Members_Spouse"
               AND s."IsCancelled" = FALSE
         ),
-        COALESCE((
+        'Children', COALESCE((
             SELECT jsonb_agg(
                 jsonb_build_object(
                     'Id', c."ID_Members",
@@ -106,7 +86,7 @@ BEGIN
             WHERE c."FK_Members_Parent" = m."ID_Members"
               AND c."IsCancelled" = FALSE
         ), '[]'::jsonb),
-        COALESCE((
+        'Addresses', COALESCE((
             SELECT jsonb_agg(
                 jsonb_build_object(
                     'Id', a."ID_MemberAddresses",
@@ -123,7 +103,7 @@ BEGIN
             WHERE a."FK_Members" = m."ID_Members"
               AND a."IsCancelled" = FALSE
         ), '[]'::jsonb),
-        COALESCE((
+        'Images', COALESCE((
             SELECT jsonb_agg(
                 jsonb_build_object(
                     'Id', i."ID_MemberImages",
@@ -138,7 +118,7 @@ BEGIN
             WHERE i."FK_Members" = m."ID_Members"
               AND i."IsCancelled" = FALSE
         ), '[]'::jsonb),
-        COALESCE((
+        'Events', COALESCE((
             SELECT jsonb_agg(
                 jsonb_build_object(
                     'Id', e."ID_MemberEvents",
@@ -153,7 +133,7 @@ BEGIN
             WHERE e."FK_Members" = m."ID_Members"
               AND e."IsCancelled" = FALSE
         ), '[]'::jsonb),
-        COALESCE((
+        'Notes', COALESCE((
             SELECT jsonb_agg(
                 jsonb_build_object(
                     'Id', n."ID_MemberNotes",
@@ -165,7 +145,7 @@ BEGIN
             WHERE n."FK_Members" = m."ID_Members"
               AND n."IsCancelled" = FALSE
         ), '[]'::jsonb),
-        COALESCE((
+        'SocialLinks', COALESCE((
             SELECT jsonb_agg(
                 jsonb_build_object(
                     'Id', s."ID_MemberSocialLinks",
@@ -178,6 +158,7 @@ BEGIN
             WHERE s."FK_Members" = m."ID_Members"
               AND s."IsCancelled" = FALSE
         ), '[]'::jsonb)
+    )
     FROM "Members" m
     WHERE m."ID_Members" = p_member_id
       AND m."FK_Families" = p_family_id

@@ -1,43 +1,11 @@
 using System.Data;
-using System.Text.Json;
 using Dapper;
-using Npgsql;
 
 namespace MidnightApi.Data;
 
-public static class DapperExtensions
+public static class SchemaBootstrap
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = null
-    };
-
-    public static string? ToJsonb(object? value) =>
-        value is null ? null : JsonSerializer.Serialize(value, JsonOptions);
-
-    public static T? FromJsonb<T>(string? json)
-    {
-        if (string.IsNullOrWhiteSpace(json) || json == "null")
-        {
-            return default;
-        }
-
-        return JsonSerializer.Deserialize<T>(json, JsonOptions);
-    }
-
-    public static T? FromJsonb<T>(object? value)
-    {
-        return value switch
-        {
-            null => default,
-            string s => FromJsonb<T>(s),
-            JsonDocument doc => doc.RootElement.Deserialize<T>(JsonOptions),
-            JsonElement el => el.Deserialize<T>(JsonOptions),
-            _ => FromJsonb<T>(value.ToString())
-        };
-    }
-
-    public static async Task EnsureSchemaAsync(this IDbConnection connection, string databaseRootPath)
+    public static async Task EnsureSchemaAsync(IDbConnection connection, string databaseRootPath)
     {
         var tablesExist = await connection.ExecuteScalarAsync<bool>(
             """
@@ -65,6 +33,9 @@ public static class DapperExtensions
         {
             Path.Combine("02_Functions", "FnGetGeneration.sql"),
             Path.Combine("02_Functions", "FnGetRelationship.sql"),
+            Path.Combine("02_Functions", "FnMemberValidateSave.sql"),
+            Path.Combine("02_Functions", "FnMemberValidateMapSpouse.sql"),
+            Path.Combine("02_Functions", "FnBuildTreeNode.sql"),
             Path.Combine("04_Views", "ViewDashboard.sql"),
             Path.Combine("04_Views", "ViewMembers.sql"),
             Path.Combine("05_Indexes", "MemberIndexes.sql"),
@@ -123,7 +94,4 @@ public static class DapperExtensions
             await connection.ExecuteAsync(sql);
         }
     }
-
-    public static bool IsUniqueViolation(this PostgresException ex) =>
-        ex.SqlState == PostgresErrorCodes.UniqueViolation;
 }

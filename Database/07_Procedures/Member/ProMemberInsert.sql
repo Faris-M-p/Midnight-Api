@@ -20,13 +20,29 @@ CREATE OR REPLACE FUNCTION "ProMemberInsert"(
     p_social_links JSONB,
     p_created_by  VARCHAR
 )
-RETURNS BIGINT
+RETURNS TABLE (
+    "ResponseCode"    INTEGER,
+    "StatusCode"      INTEGER,
+    "ResponseMessage" VARCHAR
+)
 LANGUAGE plpgsql
 AS $$
 DECLARE
     v_id BIGINT;
     v_item JSONB;
+    v_code INTEGER;
+    v_status INTEGER;
+    v_message VARCHAR;
 BEGIN
+    SELECT v."ResponseCode", v."StatusCode", v."ResponseMessage"
+    INTO v_code, v_status, v_message
+    FROM "FnMemberValidateSave"(p_family_id, NULL, p_parent_id, p_spouse_id, p_is_root) v;
+
+    IF v_code <> 0 THEN
+        RETURN QUERY SELECT v_code, v_status, v_message;
+        RETURN;
+    END IF;
+
     INSERT INTO "Members" (
         "FK_Families", "FK_Members_Parent", "FirstName", "LastName", "Email", "Phone",
         "Gender", "DateOfBirth", "DateOfDeath", "IsRoot", "Nickname", "Biography",
@@ -149,6 +165,6 @@ BEGIN
           AND "IsCancelled" = FALSE;
     END IF;
 
-    RETURN v_id;
+    RETURN QUERY SELECT 0, 201, 'Member created successfully.'::VARCHAR;
 END;
 $$;

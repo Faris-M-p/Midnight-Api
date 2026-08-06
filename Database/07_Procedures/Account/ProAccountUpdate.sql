@@ -6,15 +6,34 @@ CREATE OR REPLACE FUNCTION "ProAccountUpdate"(
     p_updated_by    VARCHAR
 )
 RETURNS TABLE (
-    "ID_UserAccounts" BIGINT,
-    "FK_Families"     BIGINT,
-    "Username"        VARCHAR,
-    "Email"           VARCHAR,
-    "IsActive"        BOOLEAN
+    "ResponseCode"    INTEGER,
+    "StatusCode"      INTEGER,
+    "ResponseMessage" VARCHAR
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM "UserAccounts" a
+        WHERE a."ID_UserAccounts" = p_id
+          AND a."IsCancelled" = FALSE
+    ) THEN
+        RETURN QUERY SELECT 1, 404, 'Account not found.'::VARCHAR;
+        RETURN;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM "UserAccounts" a
+        WHERE a."Username" = p_username
+          AND a."IsCancelled" = FALSE
+          AND a."ID_UserAccounts" <> p_id
+    ) THEN
+        RETURN QUERY SELECT 2, 409, 'Username already exists.'::VARCHAR;
+        RETURN;
+    END IF;
+
     UPDATE "UserAccounts" a
     SET "Username" = p_username,
         "Email" = p_email,
@@ -24,10 +43,6 @@ BEGIN
     WHERE a."ID_UserAccounts" = p_id
       AND a."IsCancelled" = FALSE;
 
-    RETURN QUERY
-    SELECT a."ID_UserAccounts", a."FK_Families", a."Username", a."Email", a."IsActive"
-    FROM "UserAccounts" a
-    WHERE a."ID_UserAccounts" = p_id
-      AND a."IsCancelled" = FALSE;
+    RETURN QUERY SELECT 0, 200, 'Account updated successfully.'::VARCHAR;
 END;
 $$;

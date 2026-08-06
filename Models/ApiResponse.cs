@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace MidnightApi.Models.Api;
+namespace MidnightApi.Models;
 
 public class ApiError
 {

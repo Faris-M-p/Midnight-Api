@@ -11,7 +11,7 @@ public static class DatabaseInitializer
         var databaseRoot = ResolveDatabaseRoot();
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
-        await connection.EnsureSchemaAsync(databaseRoot);
+        await SchemaBootstrap.EnsureSchemaAsync(connection, databaseRoot);
     }
 
     private static string ResolveDatabaseRoot()

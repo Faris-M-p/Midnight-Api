@@ -14,5 +14,6 @@ AS $$
     SELECT a."ID_UserAccounts", a."FK_Families", a."Username", a."Email", a."IsActive", a."PasswordHash"
     FROM "UserAccounts" a
     WHERE a."Username" = p_username
-      AND a."IsCancelled" = FALSE;
+      AND a."IsCancelled" = FALSE
+      AND a."IsActive" = TRUE;
 $$;

@@ -5,23 +5,26 @@ CREATE OR REPLACE FUNCTION "ProFamilyInsert"(
     p_created_by   VARCHAR
 )
 RETURNS TABLE (
-    "ID_Families" BIGINT,
-    "FamilyCode"  VARCHAR,
-    "FamilyName"  VARCHAR,
-    "Description" VARCHAR
+    "ResponseCode"    INTEGER,
+    "StatusCode"      INTEGER,
+    "ResponseMessage" VARCHAR
 )
 LANGUAGE plpgsql
 AS $$
-DECLARE
-    v_id BIGINT;
 BEGIN
-    INSERT INTO "Families" ("FamilyCode", "FamilyName", "Description", "CreatedBy", "CreatedOn")
-    VALUES (p_family_code, p_family_name, p_description, p_created_by, NOW())
-    RETURNING "Families"."ID_Families" INTO v_id;
+    IF EXISTS (
+        SELECT 1
+        FROM "Families" f
+        WHERE f."FamilyCode" = p_family_code
+          AND f."IsCancelled" = FALSE
+    ) THEN
+        RETURN QUERY SELECT 1, 409, 'Family code already exists.'::VARCHAR;
+        RETURN;
+    END IF;
 
-    RETURN QUERY
-    SELECT f."ID_Families", f."FamilyCode", f."FamilyName", f."Description"
-    FROM "Families" f
-    WHERE f."ID_Families" = v_id;
+    INSERT INTO "Families" ("FamilyCode", "FamilyName", "Description", "CreatedBy", "CreatedOn")
+    VALUES (p_family_code, p_family_name, p_description, p_created_by, NOW());
+
+    RETURN QUERY SELECT 0, 201, 'Family created successfully.'::VARCHAR;
 END;
 $$;
