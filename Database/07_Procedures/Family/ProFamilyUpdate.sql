@@ -1,11 +1,12 @@
 CREATE OR REPLACE PROCEDURE "ProFamilyUpdate"(
-    p_id           BIGINT,
-    p_family_name  VARCHAR,
-    p_description  VARCHAR,
-    p_updated_by   VARCHAR,
-    INOUT p_response_code INTEGER DEFAULT 0,
-    INOUT p_status_code INTEGER DEFAULT 0,
-    INOUT p_response_message VARCHAR DEFAULT NULL
+    "p_ID_Families" BIGINT,
+    "p_FamilyName" VARCHAR,
+    "p_Description" VARCHAR,
+    "p_UpdatedBy" VARCHAR,
+    INOUT "p_ResponseCode" BIGINT DEFAULT 0,
+    INOUT "p_Status" BOOLEAN DEFAULT FALSE,
+    INOUT "p_ResponseMessage" VARCHAR DEFAULT NULL,
+    INOUT "p_Data" JSONB DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
@@ -13,29 +14,32 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1
         FROM "Families" f
-        WHERE f."ID_Families" = p_id
+        WHERE f."ID_Families" = "p_ID_Families"
           AND f."IsCancelled" = FALSE
     ) THEN
-        p_response_code := 1;
-        p_status_code := 404;
-        p_response_message := 'Family not found.';
+        "p_ResponseCode" := 30;
+        "p_Status" := FALSE;
+        "p_ResponseMessage" := 'Family not found.';
+        "p_Data" := NULL;
         RETURN;
     END IF;
 
     UPDATE "Families" f
-    SET "FamilyName" = p_family_name,
-        "Description" = p_description,
-        "UpdatedBy" = p_updated_by,
+    SET "FamilyName" = "p_FamilyName",
+        "Description" = "p_Description",
+        "UpdatedBy" = "p_UpdatedBy",
         "UpdatedOn" = NOW()
-    WHERE f."ID_Families" = p_id
+    WHERE f."ID_Families" = "p_ID_Families"
       AND f."IsCancelled" = FALSE;
 
-    p_response_code := 0;
-    p_status_code := 200;
-    p_response_message := 'Family updated successfully.';
+    "p_ResponseCode" := "p_ID_Families";
+    "p_Status" := TRUE;
+    "p_ResponseMessage" := 'Family updated successfully.';
+    "p_Data" := jsonb_build_object('Id', "p_ID_Families");
 EXCEPTION WHEN OTHERS THEN
-    p_response_code := 99;
-    p_status_code := 500;
-    p_response_message := SQLERRM;
+    "p_ResponseCode" := -1;
+    "p_Status" := FALSE;
+    "p_ResponseMessage" := SQLERRM;
+    "p_Data" := NULL;
 END;
 $$;

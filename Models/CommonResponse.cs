@@ -1,8 +1,14 @@
 namespace MidnightApi.Models;
 
-public class CommonResponse
+public class IdResponse
 {
-    public int ResponseCode { get; set; }
-    public int StatusCode { get; set; }
-    public string ResponseMessage { get; set; } = string.Empty;
+    public long Id { get; set; }
+}
+
+public class CommonResponse<T>
+{
+    public long ResponseCode { get; set; }
+    public bool Status { get; set; }
+    public string? ResponseMessage { get; set; }
+    public T? Data { get; set; }
 }

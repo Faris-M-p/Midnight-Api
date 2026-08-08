@@ -119,7 +119,7 @@ public class MemberController : ControllerBase
             CreatedBy = User.GetUsername()
         });
 
-        return _commonService.ToActionResult(result, HttpContext.TraceIdentifier);
+        return _commonService.ToActionResult(result, HttpContext.TraceIdentifier, StatusCodes.Status201Created);
     }
 
     [HttpPut("{id:long}")]

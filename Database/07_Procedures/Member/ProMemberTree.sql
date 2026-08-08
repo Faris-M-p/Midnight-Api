@@ -1,6 +1,6 @@
 CREATE OR REPLACE PROCEDURE "ProMemberTree"(
-    p_family_id BIGINT,
-    INOUT p_payload JSONB DEFAULT NULL
+    "p_FK_Families" BIGINT,
+    INOUT "p_Data" JSONB DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
@@ -11,18 +11,18 @@ DECLARE
 BEGIN
     SELECT COUNT(*)::INTEGER INTO v_total
     FROM "Members" m
-    WHERE m."FK_Families" = p_family_id
+    WHERE m."FK_Families" = "p_FK_Families"
       AND m."IsCancelled" = FALSE;
 
     SELECT m."ID_Members" INTO v_root_id
     FROM "Members" m
-    WHERE m."FK_Families" = p_family_id
+    WHERE m."FK_Families" = "p_FK_Families"
       AND m."IsRoot" = TRUE
       AND m."IsCancelled" = FALSE
     LIMIT 1;
 
     IF v_root_id IS NULL THEN
-        p_payload := jsonb_build_object(
+        "p_Data" := jsonb_build_object(
             'Root', NULL,
             'TotalMembers', v_total
         );
@@ -31,7 +31,7 @@ BEGIN
 
     v_root := "FnBuildTreeNode"(v_root_id, TRUE);
 
-    p_payload := jsonb_build_object(
+    "p_Data" := jsonb_build_object(
         'Root', v_root,
         'TotalMembers', v_total
     );

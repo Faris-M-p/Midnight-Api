@@ -1,17 +1,18 @@
 CREATE OR REPLACE PROCEDURE "ProAccountExistsByUsername"(
-    p_username   VARCHAR,
-    p_exclude_id BIGINT DEFAULT NULL,
-    INOUT p_payload JSONB DEFAULT NULL
+    "p_Username" VARCHAR,
+    "p_ID_UserAccounts" BIGINT DEFAULT NULL,
+    INOUT "p_Result" REFCURSOR DEFAULT 'account_exists_by_username'
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    SELECT to_jsonb(EXISTS (
+    OPEN "p_Result" FOR
+    SELECT EXISTS (
         SELECT 1
         FROM "UserAccounts" a
-        WHERE a."Username" = p_username
+        WHERE a."Username" = "p_Username"
           AND a."IsCancelled" = FALSE
-          AND (p_exclude_id IS NULL OR a."ID_UserAccounts" <> p_exclude_id)
-    )) INTO p_payload;
+          AND ("p_ID_UserAccounts" IS NULL OR a."ID_UserAccounts" <> "p_ID_UserAccounts")
+    ) AS "Exists";
 END;
 $$;

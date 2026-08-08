@@ -1,18 +1,19 @@
 CREATE OR REPLACE PROCEDURE "ProMemberHasRoot"(
-    p_family_id         BIGINT,
-    p_exclude_member_id BIGINT DEFAULT NULL,
-    INOUT p_payload JSONB DEFAULT NULL
+    "p_FK_Families" BIGINT,
+    "p_ExcludeMemberId" BIGINT DEFAULT NULL,
+    INOUT "p_Result" REFCURSOR DEFAULT 'member_has_root'
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    SELECT to_jsonb(EXISTS (
+    OPEN "p_Result" FOR
+    SELECT EXISTS (
         SELECT 1
         FROM "Members" m
-        WHERE m."FK_Families" = p_family_id
+        WHERE m."FK_Families" = "p_FK_Families"
           AND m."IsRoot" = TRUE
           AND m."IsCancelled" = FALSE
-          AND (p_exclude_member_id IS NULL OR m."ID_Members" <> p_exclude_member_id)
-    )) INTO p_payload;
+          AND ("p_ExcludeMemberId" IS NULL OR m."ID_Members" <> "p_ExcludeMemberId")
+    ) AS "Exists";
 END;
 $$;

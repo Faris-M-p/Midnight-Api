@@ -1,14 +1,14 @@
 CREATE OR REPLACE PROCEDURE "ProMemberGetParentId"(
-    p_member_id BIGINT,
-    INOUT p_payload JSONB DEFAULT NULL
+    "p_ID_Members" BIGINT,
+    INOUT "p_Result" REFCURSOR DEFAULT 'member_get_parent_id'
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    SELECT to_jsonb(m."FK_Members_Parent")
-    INTO p_payload
+    OPEN "p_Result" FOR
+    SELECT m."FK_Members_Parent" AS "ParentId"
     FROM "Members" m
-    WHERE m."ID_Members" = p_member_id
+    WHERE m."ID_Members" = "p_ID_Members"
       AND m."IsCancelled" = FALSE;
 END;
 $$;

@@ -73,55 +73,55 @@ public class InputUpdateAccountView
 
 public class InputGetAccount
 {
-    [DbParam("p_id")]
+    [DbParam("p_ID_UserAccounts")]
     public long Id { get; set; }
 }
 
 public class InputLoginAccount
 {
-    [DbParam("p_username")]
+    [DbParam("p_Username")]
     public string Username { get; set; } = string.Empty;
 }
 
 public class InputRegisterAccount
 {
-    [DbParam("p_family_code")]
+    [DbParam("p_FamilyCode")]
     public string FamilyCode { get; set; } = string.Empty;
 
-    [DbParam("p_family_name")]
+    [DbParam("p_FamilyName")]
     public string FamilyName { get; set; } = string.Empty;
 
-    [DbParam("p_description")]
+    [DbParam("p_Description")]
     public string? Description { get; set; }
 
-    [DbParam("p_username")]
+    [DbParam("p_Username")]
     public string Username { get; set; } = string.Empty;
 
-    [DbParam("p_email")]
+    [DbParam("p_Email")]
     public string Email { get; set; } = string.Empty;
 
-    [DbParam("p_password_hash")]
+    [DbParam("p_PasswordHash")]
     public string PasswordHash { get; set; } = string.Empty;
 
-    [DbParam("p_created_by")]
+    [DbParam("p_CreatedBy")]
     public string CreatedBy { get; set; } = string.Empty;
 }
 
 public class InputUpdateAccount
 {
-    [DbParam("p_id")]
+    [DbParam("p_ID_UserAccounts")]
     public long Id { get; set; }
 
-    [DbParam("p_username")]
+    [DbParam("p_Username")]
     public string Username { get; set; } = string.Empty;
 
-    [DbParam("p_email")]
+    [DbParam("p_Email")]
     public string Email { get; set; } = string.Empty;
 
-    [DbParam("p_password_hash")]
+    [DbParam("p_PasswordHash")]
     public string? PasswordHash { get; set; }
 
-    [DbParam("p_updated_by")]
+    [DbParam("p_UpdatedBy")]
     public string UpdatedBy { get; set; } = string.Empty;
 }
 
@@ -151,11 +151,11 @@ public class OutputLoginAccount
     public string PasswordHash { get; set; } = string.Empty;
 }
 
-public class OutputRegister : CommonResponse
+public class OutputRegister : CommonResponse<IdResponse>
 {
 }
 
-public class OutputUpdateAccount : CommonResponse
+public class OutputUpdateAccount : CommonResponse<IdResponse>
 {
 }
 

@@ -1,6 +1,6 @@
 CREATE OR REPLACE PROCEDURE "ProMemberDashboard"(
-    p_family_id BIGINT,
-    INOUT p_payload JSONB DEFAULT NULL
+    "p_FK_Families" BIGINT,
+    INOUT "p_Data" JSONB DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
@@ -11,15 +11,15 @@ DECLARE
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM "Families"
-        WHERE "ID_Families" = p_family_id AND "IsCancelled" = FALSE
+        WHERE "ID_Families" = "p_FK_Families" AND "IsCancelled" = FALSE
     ) THEN
-        p_payload := NULL;
+        "p_Data" := NULL;
         RETURN;
     END IF;
 
     SELECT m."ID_Members" INTO v_root_id
     FROM "Members" m
-    WHERE m."FK_Families" = p_family_id
+    WHERE m."FK_Families" = "p_FK_Families"
       AND m."IsRoot" = TRUE
       AND m."IsCancelled" = FALSE
     LIMIT 1;
@@ -34,12 +34,12 @@ BEGIN
             FROM "Members" c
             INNER JOIN tree t ON c."FK_Members_Parent" = t."ID_Members"
             WHERE c."IsCancelled" = FALSE
-              AND c."FK_Families" = p_family_id
+              AND c."FK_Families" = "p_FK_Families"
         )
         SELECT COALESCE(MAX(depth), 0) INTO v_gens FROM tree;
     END IF;
 
-    p_payload := jsonb_build_object(
+    "p_Data" := jsonb_build_object(
         'Family', (
             SELECT jsonb_build_object(
                 'ID_Families', f."ID_Families",
@@ -48,12 +48,12 @@ BEGIN
                 'Description', f."Description"
             )
             FROM "Families" f
-            WHERE f."ID_Families" = p_family_id
+            WHERE f."ID_Families" = "p_FK_Families"
         ),
         'TotalMembers', (
             SELECT COUNT(*)::INTEGER
             FROM "Members" m
-            WHERE m."FK_Families" = p_family_id AND m."IsCancelled" = FALSE
+            WHERE m."FK_Families" = "p_FK_Families" AND m."IsCancelled" = FALSE
         ),
         'TotalGenerations', v_gens,
         'RecentMembers', COALESCE((
@@ -76,7 +76,7 @@ BEGIN
                         LIMIT 1
                     ) AS "PhotoUrl"
                 FROM "Members" m
-                WHERE m."FK_Families" = p_family_id AND m."IsCancelled" = FALSE
+                WHERE m."FK_Families" = "p_FK_Families" AND m."IsCancelled" = FALSE
                 ORDER BY m."CreatedOn" DESC
                 LIMIT 5
             ) x
@@ -141,7 +141,7 @@ BEGIN
                             )
                         END AS next_bday
                 ) nb
-                WHERE m."FK_Families" = p_family_id
+                WHERE m."FK_Families" = "p_FK_Families"
                   AND m."IsCancelled" = FALSE
                   AND m."DateOfBirth" IS NOT NULL
                   AND m."DateOfDeath" IS NULL
@@ -160,7 +160,7 @@ BEGIN
                 'DeceasedCount', COUNT(*) FILTER (WHERE m."DateOfDeath" IS NOT NULL)
             )
             FROM "Members" m
-            WHERE m."FK_Families" = p_family_id AND m."IsCancelled" = FALSE
+            WHERE m."FK_Families" = "p_FK_Families" AND m."IsCancelled" = FALSE
         )
     );
 END;

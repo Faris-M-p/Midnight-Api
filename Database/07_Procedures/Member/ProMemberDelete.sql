@@ -1,10 +1,11 @@
 CREATE OR REPLACE PROCEDURE "ProMemberDelete"(
-    p_family_id BIGINT,
-    p_member_id BIGINT,
-    p_deleted_by VARCHAR,
-    INOUT p_response_code INTEGER DEFAULT 0,
-    INOUT p_status_code INTEGER DEFAULT 0,
-    INOUT p_response_message VARCHAR DEFAULT NULL
+    "p_FK_Families" BIGINT,
+    "p_ID_Members" BIGINT,
+    "p_UpdatedBy" VARCHAR,
+    INOUT "p_ResponseCode" BIGINT DEFAULT 0,
+    INOUT "p_Status" BOOLEAN DEFAULT FALSE,
+    INOUT "p_ResponseMessage" VARCHAR DEFAULT NULL,
+    INOUT "p_Data" JSONB DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
@@ -13,36 +14,38 @@ DECLARE
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM "Members"
-        WHERE "ID_Members" = p_member_id
-          AND "FK_Families" = p_family_id
+        WHERE "ID_Members" = "p_ID_Members"
+          AND "FK_Families" = "p_FK_Families"
           AND "IsCancelled" = FALSE
     ) THEN
-        p_response_code := 1;
-        p_status_code := 404;
-        p_response_message := 'Member not found.';
+        "p_ResponseCode" := 30;
+        "p_Status" := FALSE;
+        "p_ResponseMessage" := 'Member not found.';
+        "p_Data" := NULL;
         RETURN;
     END IF;
 
     IF EXISTS (
         SELECT 1 FROM "Members"
-        WHERE "FK_Members_Parent" = p_member_id
-          AND "FK_Families" = p_family_id
+        WHERE "FK_Members_Parent" = "p_ID_Members"
+          AND "FK_Families" = "p_FK_Families"
           AND "IsCancelled" = FALSE
     ) THEN
-        p_response_code := 2;
-        p_status_code := 400;
-        p_response_message := 'Cannot delete this member because they have children. Remove or reassign children first.';
+        "p_ResponseCode" := 20;
+        "p_Status" := FALSE;
+        "p_ResponseMessage" := 'Cannot delete this member because they have children. Remove or reassign children first.';
+        "p_Data" := NULL;
         RETURN;
     END IF;
 
     SELECT "FK_Members_Spouse" INTO v_spouse_id
     FROM "Members"
-    WHERE "ID_Members" = p_member_id;
+    WHERE "ID_Members" = "p_ID_Members";
 
     IF v_spouse_id IS NOT NULL THEN
         UPDATE "Members"
         SET "FK_Members_Spouse" = NULL,
-            "UpdatedBy" = p_deleted_by,
+            "UpdatedBy" = "p_UpdatedBy",
             "UpdatedOn" = NOW()
         WHERE "ID_Members" = v_spouse_id
           AND "IsCancelled" = FALSE;
@@ -51,16 +54,18 @@ BEGIN
     UPDATE "Members"
     SET "FK_Members_Spouse" = NULL,
         "IsCancelled" = TRUE,
-        "CancelledBy" = p_deleted_by,
+        "CancelledBy" = "p_UpdatedBy",
         "CancelledOn" = NOW()
-    WHERE "ID_Members" = p_member_id;
+    WHERE "ID_Members" = "p_ID_Members";
 
-    p_response_code := 0;
-    p_status_code := 200;
-    p_response_message := 'Member deleted successfully.';
+    "p_ResponseCode" := "p_ID_Members";
+    "p_Status" := TRUE;
+    "p_ResponseMessage" := 'Member deleted successfully.';
+    "p_Data" := jsonb_build_object('Id', "p_ID_Members");
 EXCEPTION WHEN OTHERS THEN
-    p_response_code := 99;
-    p_status_code := 500;
-    p_response_message := SQLERRM;
+    "p_ResponseCode" := -1;
+    "p_Status" := FALSE;
+    "p_ResponseMessage" := SQLERRM;
+    "p_Data" := NULL;
 END;
 $$;

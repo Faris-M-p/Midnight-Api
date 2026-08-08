@@ -14,9 +14,23 @@ public class MembersRepository : IMembersRepository
         _dataAccessDapper = dataAccessDapper;
     }
 
-    public Task<OutputPagedMembers?> GetListAsync(InputMemberList input) =>
-        _dataAccessDapper.GetPayloadByStoredProcedureAsync<OutputPagedMembers>(
+    public async Task<OutputPagedMembers?> GetListAsync(InputMemberList input)
+    {
+        var (items, totalCount) = await _dataAccessDapper.GetPagedListByStoredProcedureAsync<OutputMemberListItem>(
             StoredProcedures.MemberList, input);
+
+        var page = Math.Max(input.Page, 1);
+        var pageSize = Math.Clamp(input.PageSize <= 0 ? 20 : input.PageSize, 1, 100);
+
+        return new OutputPagedMembers
+        {
+            Items = items,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            TotalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize)
+        };
+    }
 
     public Task<OutputFamilyTree?> GetTreeAsync(InputMemberTree input) =>
         _dataAccessDapper.GetPayloadByStoredProcedureAsync<OutputFamilyTree>(

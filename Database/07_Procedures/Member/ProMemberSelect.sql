@@ -1,7 +1,7 @@
 CREATE OR REPLACE PROCEDURE "ProMemberSelect"(
-    p_family_id BIGINT,
-    p_member_id BIGINT,
-    INOUT p_payload JSONB DEFAULT NULL
+    "p_FK_Families" BIGINT,
+    "p_ID_Members" BIGINT,
+    INOUT "p_Data" JSONB DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
@@ -156,10 +156,10 @@ BEGIN
               AND s."IsCancelled" = FALSE
         ), '[]'::jsonb)
     )
-    INTO p_payload
+    INTO "p_Data"
     FROM "Members" m
-    WHERE m."ID_Members" = p_member_id
-      AND m."FK_Families" = p_family_id
+    WHERE m."ID_Members" = "p_ID_Members"
+      AND m."FK_Families" = "p_FK_Families"
       AND m."IsCancelled" = FALSE;
 END;
 $$;

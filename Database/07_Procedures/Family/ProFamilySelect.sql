@@ -1,16 +1,14 @@
 CREATE OR REPLACE PROCEDURE "ProFamilySelect"(
-    p_id BIGINT,
-    INOUT p_payload JSONB DEFAULT NULL
+    "p_ID_Families" BIGINT,
+    INOUT "p_Result" REFCURSOR DEFAULT 'family_select'
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    SELECT to_jsonb(t) INTO p_payload
-    FROM (
-        SELECT f."ID_Families", f."FamilyCode", f."FamilyName", f."Description"
-        FROM "Families" f
-        WHERE f."ID_Families" = p_id
-          AND f."IsCancelled" = FALSE
-    ) t;
+    OPEN "p_Result" FOR
+    SELECT f."ID_Families", f."FamilyCode", f."FamilyName", f."Description"
+    FROM "Families" f
+    WHERE f."ID_Families" = "p_ID_Families"
+      AND f."IsCancelled" = FALSE;
 END;
 $$;

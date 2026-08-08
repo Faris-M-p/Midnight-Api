@@ -300,208 +300,208 @@ public class InputMapSpouseView
 
 public class InputMemberList
 {
-    [DbParam("p_family_id")]
+    [DbParam("p_FK_Families")]
     public long FamilyId { get; set; }
 
-    [DbParam("p_search")]
+    [DbParam("p_Search")]
     public string? Search { get; set; }
 
-    [DbParam("p_gender")]
+    [DbParam("p_Gender")]
     public string? Gender { get; set; }
 
-    [DbParam("p_sort_by")]
+    [DbParam("p_SortBy")]
     public string? SortBy { get; set; }
 
-    [DbParam("p_sort_desc")]
+    [DbParam("p_SortDesc")]
     public bool SortDesc { get; set; }
 
-    [DbParam("p_page")]
+    [DbParam("p_Page")]
     public int Page { get; set; } = 1;
 
-    [DbParam("p_page_size")]
+    [DbParam("p_PageSize")]
     public int PageSize { get; set; } = 20;
 }
 
 public class InputMemberTree
 {
-    [DbParam("p_family_id")]
+    [DbParam("p_FK_Families")]
     public long FamilyId { get; set; }
 }
 
 public class InputGetMember
 {
-    [DbParam("p_family_id")]
+    [DbParam("p_FK_Families")]
     public long FamilyId { get; set; }
 
-    [DbParam("p_member_id")]
+    [DbParam("p_ID_Members")]
     public long MemberId { get; set; }
 }
 
 public class InputCreateMember
 {
-    [DbParam("p_family_id")]
+    [DbParam("p_FK_Families")]
     public long FamilyId { get; set; }
 
-    [DbParam("p_parent_id")]
+    [DbParam("p_FK_Members_Parent")]
     public long? ParentId { get; set; }
 
-    [DbParam("p_spouse_id")]
+    [DbParam("p_FK_Members_Spouse")]
     public long? SpouseId { get; set; }
 
-    [DbParam("p_first_name")]
+    [DbParam("p_FirstName")]
     public string FirstName { get; set; } = string.Empty;
 
-    [DbParam("p_last_name")]
+    [DbParam("p_LastName")]
     public string LastName { get; set; } = string.Empty;
 
-    [DbParam("p_email")]
+    [DbParam("p_Email")]
     public string? Email { get; set; }
 
-    [DbParam("p_phone")]
+    [DbParam("p_Phone")]
     public string? Phone { get; set; }
 
-    [DbParam("p_gender")]
+    [DbParam("p_Gender")]
     public string? Gender { get; set; }
 
-    [DbParam("p_dob")]
+    [DbParam("p_DateOfBirth")]
     public DateOnly? DateOfBirth { get; set; }
 
-    [DbParam("p_dod")]
+    [DbParam("p_DateOfDeath")]
     public DateOnly? DateOfDeath { get; set; }
 
-    [DbParam("p_is_root")]
+    [DbParam("p_IsRoot")]
     public bool IsRoot { get; set; }
 
-    [DbParam("p_nickname")]
+    [DbParam("p_Nickname")]
     public string? Nickname { get; set; }
 
-    [DbParam("p_biography")]
+    [DbParam("p_Biography")]
     public string? Biography { get; set; }
 
-    [DbParam("p_profession")]
+    [DbParam("p_Profession")]
     public string? Profession { get; set; }
 
-    [DbParam("p_addresses")]
+    [DbParam("p_Addresses")]
     public string? Addresses { get; set; }
 
-    [DbParam("p_images")]
+    [DbParam("p_Images")]
     public string? Images { get; set; }
 
-    [DbParam("p_events")]
+    [DbParam("p_Events")]
     public string? Events { get; set; }
 
-    [DbParam("p_notes")]
+    [DbParam("p_Notes")]
     public string? Notes { get; set; }
 
-    [DbParam("p_social_links")]
+    [DbParam("p_SocialLinks")]
     public string? SocialLinks { get; set; }
 
-    [DbParam("p_created_by")]
+    [DbParam("p_CreatedBy")]
     public string CreatedBy { get; set; } = string.Empty;
 }
 
 public class InputUpdateMember
 {
-    [DbParam("p_family_id")]
+    [DbParam("p_FK_Families")]
     public long FamilyId { get; set; }
 
-    [DbParam("p_member_id")]
+    [DbParam("p_ID_Members")]
     public long MemberId { get; set; }
 
-    [DbParam("p_parent_id")]
+    [DbParam("p_FK_Members_Parent")]
     public long? ParentId { get; set; }
 
-    [DbParam("p_spouse_id")]
+    [DbParam("p_FK_Members_Spouse")]
     public long? SpouseId { get; set; }
 
-    [DbParam("p_first_name")]
+    [DbParam("p_FirstName")]
     public string FirstName { get; set; } = string.Empty;
 
-    [DbParam("p_last_name")]
+    [DbParam("p_LastName")]
     public string LastName { get; set; } = string.Empty;
 
-    [DbParam("p_email")]
+    [DbParam("p_Email")]
     public string? Email { get; set; }
 
-    [DbParam("p_phone")]
+    [DbParam("p_Phone")]
     public string? Phone { get; set; }
 
-    [DbParam("p_gender")]
+    [DbParam("p_Gender")]
     public string? Gender { get; set; }
 
-    [DbParam("p_dob")]
+    [DbParam("p_DateOfBirth")]
     public DateOnly? DateOfBirth { get; set; }
 
-    [DbParam("p_dod")]
+    [DbParam("p_DateOfDeath")]
     public DateOnly? DateOfDeath { get; set; }
 
-    [DbParam("p_is_root")]
+    [DbParam("p_IsRoot")]
     public bool IsRoot { get; set; }
 
-    [DbParam("p_nickname")]
+    [DbParam("p_Nickname")]
     public string? Nickname { get; set; }
 
-    [DbParam("p_biography")]
+    [DbParam("p_Biography")]
     public string? Biography { get; set; }
 
-    [DbParam("p_profession")]
+    [DbParam("p_Profession")]
     public string? Profession { get; set; }
 
-    [DbParam("p_addresses")]
+    [DbParam("p_Addresses")]
     public string? Addresses { get; set; }
 
-    [DbParam("p_images")]
+    [DbParam("p_Images")]
     public string? Images { get; set; }
 
-    [DbParam("p_events")]
+    [DbParam("p_Events")]
     public string? Events { get; set; }
 
-    [DbParam("p_notes")]
+    [DbParam("p_Notes")]
     public string? Notes { get; set; }
 
-    [DbParam("p_social_links")]
+    [DbParam("p_SocialLinks")]
     public string? SocialLinks { get; set; }
 
-    [DbParam("p_updated_by")]
+    [DbParam("p_UpdatedBy")]
     public string UpdatedBy { get; set; } = string.Empty;
 }
 
 public class InputDeleteMember
 {
-    [DbParam("p_family_id")]
+    [DbParam("p_FK_Families")]
     public long FamilyId { get; set; }
 
-    [DbParam("p_member_id")]
+    [DbParam("p_ID_Members")]
     public long MemberId { get; set; }
 
-    [DbParam("p_deleted_by")]
+    [DbParam("p_UpdatedBy")]
     public string DeletedBy { get; set; } = string.Empty;
 }
 
 public class InputMapSpouse
 {
-    [DbParam("p_family_id")]
+    [DbParam("p_FK_Families")]
     public long FamilyId { get; set; }
 
-    [DbParam("p_member_id")]
+    [DbParam("p_ID_Members")]
     public long MemberId { get; set; }
 
-    [DbParam("p_spouse_id")]
+    [DbParam("p_FK_Members_Spouse")]
     public long SpouseId { get; set; }
 
-    [DbParam("p_updated_by")]
+    [DbParam("p_UpdatedBy")]
     public string UpdatedBy { get; set; } = string.Empty;
 }
 
 public class InputMemberDashboard
 {
-    [DbParam("p_family_id")]
+    [DbParam("p_FK_Families")]
     public long FamilyId { get; set; }
 }
 
 public class InputMemberTimeline
 {
-    [DbParam("p_family_id")]
+    [DbParam("p_FK_Families")]
     public long FamilyId { get; set; }
 }
 
@@ -554,19 +554,19 @@ public class OutputGetMember
     public List<MemberSocialLinkItem> SocialLinks { get; set; } = [];
 }
 
-public class OutputCreateMember : CommonResponse
+public class OutputCreateMember : CommonResponse<IdResponse>
 {
 }
 
-public class OutputUpdateMember : CommonResponse
+public class OutputUpdateMember : CommonResponse<IdResponse>
 {
 }
 
-public class OutputDeleteMember : CommonResponse
+public class OutputDeleteMember : CommonResponse<IdResponse>
 {
 }
 
-public class OutputMapSpouse : CommonResponse
+public class OutputMapSpouse : CommonResponse<IdResponse>
 {
 }
 

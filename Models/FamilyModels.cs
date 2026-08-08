@@ -23,37 +23,37 @@ public class InputUpdateFamilyView
 
 public class InputGetFamily
 {
-    [DbParam("p_id")]
+    [DbParam("p_ID_Families")]
     public long Id { get; set; }
 }
 
 public class InputCreateFamily
 {
-    [DbParam("p_family_code")]
+    [DbParam("p_FamilyCode")]
     public string FamilyCode { get; set; } = string.Empty;
 
-    [DbParam("p_family_name")]
+    [DbParam("p_FamilyName")]
     public string FamilyName { get; set; } = string.Empty;
 
-    [DbParam("p_description")]
+    [DbParam("p_Description")]
     public string? Description { get; set; }
 
-    [DbParam("p_created_by")]
+    [DbParam("p_CreatedBy")]
     public string CreatedBy { get; set; } = string.Empty;
 }
 
 public class InputUpdateFamily
 {
-    [DbParam("p_id")]
+    [DbParam("p_ID_Families")]
     public long Id { get; set; }
 
-    [DbParam("p_family_name")]
+    [DbParam("p_FamilyName")]
     public string FamilyName { get; set; } = string.Empty;
 
-    [DbParam("p_description")]
+    [DbParam("p_Description")]
     public string? Description { get; set; }
 
-    [DbParam("p_updated_by")]
+    [DbParam("p_UpdatedBy")]
     public string UpdatedBy { get; set; } = string.Empty;
 }
 
@@ -67,10 +67,10 @@ public class OutputGetFamily
     public string? Description { get; set; }
 }
 
-public class OutputCreateFamily : CommonResponse
+public class OutputCreateFamily : CommonResponse<IdResponse>
 {
 }
 
-public class OutputUpdateFamily : CommonResponse
+public class OutputUpdateFamily : CommonResponse<IdResponse>
 {
 }

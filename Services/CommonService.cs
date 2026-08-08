@@ -52,37 +52,39 @@ public class CommonService
     public string? ToJson(object? value) =>
         value is null ? null : JsonSerializer.Serialize(value, JsonOptions);
 
-    public void EnsureSuccess(CommonResponse result)
+    public void EnsureSuccess<T>(CommonResponse<T> result)
     {
-        if (result.ResponseCode == 0)
+        if (result.Status && result.ResponseCode > 0)
         {
             return;
         }
 
-        throw result.StatusCode switch
+        var message = result.ResponseMessage ?? "Request failed.";
+        throw result.ResponseCode switch
         {
-            StatusCodes.Status404NotFound => new NotFoundException(result.ResponseMessage),
-            StatusCodes.Status409Conflict => new ConflictException(result.ResponseMessage),
-            StatusCodes.Status401Unauthorized => new UnauthorizedAccessException(result.ResponseMessage),
-            _ => new BadRequestException(result.ResponseMessage)
+            30 => new NotFoundException(message),
+            20 when message.Contains("already exists", StringComparison.OrdinalIgnoreCase)
+                => new ConflictException(message),
+            -1 => new BadRequestException(message),
+            _ => new BadRequestException(message)
         };
     }
 
-    public IActionResult ToActionResult<T>(T result, string? traceId = null)
-        where T : CommonResponse
+    public IActionResult ToActionResult<T>(CommonResponse<T> result, string? traceId = null, int? httpStatus = null)
     {
         EnsureSuccess(result);
 
-        return new ObjectResult(new ApiResponse<T>
+        var statusCode = httpStatus ?? StatusCodes.Status200OK;
+        return new ObjectResult(new ApiResponse<CommonResponse<T>>
         {
             Success = true,
-            StatusCode = result.StatusCode,
-            Message = result.ResponseMessage,
+            StatusCode = statusCode,
+            Message = result.ResponseMessage ?? "Success.",
             Data = result,
             TraceId = traceId
         })
         {
-            StatusCode = result.StatusCode
+            StatusCode = statusCode
         };
     }
 }

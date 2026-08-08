@@ -1,23 +1,21 @@
 CREATE OR REPLACE PROCEDURE "ProAccountLogin"(
-    p_username VARCHAR,
-    INOUT p_payload JSONB DEFAULT NULL
+    "p_Username" VARCHAR,
+    INOUT "p_Result" REFCURSOR DEFAULT 'account_login'
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    SELECT to_jsonb(t) INTO p_payload
-    FROM (
-        SELECT
-            a."ID_UserAccounts",
-            a."FK_Families",
-            a."Username",
-            a."Email",
-            a."IsActive",
-            a."PasswordHash"
-        FROM "UserAccounts" a
-        WHERE a."Username" = p_username
-          AND a."IsCancelled" = FALSE
-          AND a."IsActive" = TRUE
-    ) t;
+    OPEN "p_Result" FOR
+    SELECT
+        a."ID_UserAccounts",
+        a."FK_Families",
+        a."Username",
+        a."Email",
+        a."IsActive",
+        a."PasswordHash"
+    FROM "UserAccounts" a
+    WHERE a."Username" = "p_Username"
+      AND a."IsCancelled" = FALSE
+      AND a."IsActive" = TRUE;
 END;
 $$;

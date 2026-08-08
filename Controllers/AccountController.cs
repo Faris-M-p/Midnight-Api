@@ -48,7 +48,7 @@ public class AccountController : ControllerBase
             CreatedBy = username
         });
 
-        return _commonService.ToActionResult(result, HttpContext.TraceIdentifier);
+        return _commonService.ToActionResult(result, HttpContext.TraceIdentifier, StatusCodes.Status201Created);
     }
 
     [HttpPost("login")]
