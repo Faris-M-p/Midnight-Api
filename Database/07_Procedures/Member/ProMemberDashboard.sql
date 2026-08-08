@@ -1,8 +1,6 @@
-CREATE OR REPLACE FUNCTION "ProMemberDashboard"(
-    p_family_id BIGINT
-)
-RETURNS TABLE (
-    "Payload" JSONB
+CREATE OR REPLACE PROCEDURE "ProMemberDashboard"(
+    p_family_id BIGINT,
+    INOUT p_payload JSONB DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
@@ -15,7 +13,8 @@ BEGIN
         SELECT 1 FROM "Families"
         WHERE "ID_Families" = p_family_id AND "IsCancelled" = FALSE
     ) THEN
-        RAISE EXCEPTION 'Family not found.';
+        p_payload := NULL;
+        RETURN;
     END IF;
 
     SELECT m."ID_Members" INTO v_root_id
@@ -40,8 +39,7 @@ BEGIN
         SELECT COALESCE(MAX(depth), 0) INTO v_gens FROM tree;
     END IF;
 
-    RETURN QUERY
-    SELECT jsonb_build_object(
+    p_payload := jsonb_build_object(
         'Family', (
             SELECT jsonb_build_object(
                 'ID_Families', f."ID_Families",

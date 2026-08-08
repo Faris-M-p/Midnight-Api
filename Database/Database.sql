@@ -34,6 +34,7 @@
 \i 06_Triggers/MemberAudit.sql
 
 \echo '=== 07_Procedures ==='
+\i 07_Procedures/DropLegacyFunctions.sql
 \i 07_Procedures/Account/ProAccountSelect.sql
 \i 07_Procedures/Account/ProAccountLogin.sql
 \i 07_Procedures/Account/ProAccountRegister.sql

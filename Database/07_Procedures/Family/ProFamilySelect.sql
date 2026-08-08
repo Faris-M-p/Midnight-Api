@@ -1,16 +1,16 @@
-CREATE OR REPLACE FUNCTION "ProFamilySelect"(
-    p_id BIGINT
+CREATE OR REPLACE PROCEDURE "ProFamilySelect"(
+    p_id BIGINT,
+    INOUT p_payload JSONB DEFAULT NULL
 )
-RETURNS TABLE (
-    "ID_Families" BIGINT,
-    "FamilyCode"  VARCHAR,
-    "FamilyName"  VARCHAR,
-    "Description" VARCHAR
-)
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
-    SELECT f."ID_Families", f."FamilyCode", f."FamilyName", f."Description"
-    FROM "Families" f
-    WHERE f."ID_Families" = p_id
-      AND f."IsCancelled" = FALSE;
+BEGIN
+    SELECT to_jsonb(t) INTO p_payload
+    FROM (
+        SELECT f."ID_Families", f."FamilyCode", f."FamilyName", f."Description"
+        FROM "Families" f
+        WHERE f."ID_Families" = p_id
+          AND f."IsCancelled" = FALSE
+    ) t;
+END;
 $$;

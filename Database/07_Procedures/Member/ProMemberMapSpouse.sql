@@ -1,13 +1,11 @@
-CREATE OR REPLACE FUNCTION "ProMemberMapSpouse"(
+CREATE OR REPLACE PROCEDURE "ProMemberMapSpouse"(
     p_family_id  BIGINT,
     p_member_id  BIGINT,
     p_spouse_id  BIGINT,
-    p_updated_by VARCHAR
-)
-RETURNS TABLE (
-    "ResponseCode"    INTEGER,
-    "StatusCode"      INTEGER,
-    "ResponseMessage" VARCHAR
+    p_updated_by VARCHAR,
+    INOUT p_response_code INTEGER DEFAULT 0,
+    INOUT p_status_code INTEGER DEFAULT 0,
+    INOUT p_response_message VARCHAR DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
@@ -21,7 +19,9 @@ BEGIN
     FROM "FnMemberValidateMapSpouse"(p_family_id, p_member_id, p_spouse_id) v;
 
     IF v_code <> 0 THEN
-        RETURN QUERY SELECT v_code, v_status, v_message;
+        p_response_code := v_code;
+        p_status_code := v_status;
+        p_response_message := v_message;
         RETURN;
     END IF;
 
@@ -41,6 +41,12 @@ BEGIN
       AND "FK_Families" = p_family_id
       AND "IsCancelled" = FALSE;
 
-    RETURN QUERY SELECT 0, 200, 'Spouse relationship mapped successfully.'::VARCHAR;
+    p_response_code := 0;
+    p_status_code := 200;
+    p_response_message := 'Spouse relationship mapped successfully.';
+EXCEPTION WHEN OTHERS THEN
+    p_response_code := 99;
+    p_status_code := 500;
+    p_response_message := SQLERRM;
 END;
 $$;

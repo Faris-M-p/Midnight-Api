@@ -5,7 +5,6 @@ using MidnightApi.Exceptions;
 using MidnightApi.Interfaces;
 using MidnightApi.Models;
 using MidnightApi.Services;
-using Npgsql;
 
 namespace MidnightApi.Controllers;
 
@@ -68,25 +67,17 @@ public class FamilyController : ControllerBase
     {
         _commonService.ValidateModelState(ModelState);
 
-        OutputDashboard? data;
-        try
+        var data = await _members.GetDashboardAsync(new InputMemberDashboard
         {
-            data = await _members.GetDashboardAsync(new InputMemberDashboard
-            {
-                FamilyId = User.GetFamilyId()
-            });
-        }
-        catch (PostgresException ex) when (ex.MessageText.Contains("Family not found", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new NotFoundException("Family not found.");
-        }
+            FamilyId = User.GetFamilyId()
+        }) ?? throw new NotFoundException("Family not found.");
 
         return Ok(new ApiResponse<OutputDashboard>
         {
             Success = true,
             StatusCode = StatusCodes.Status200OK,
             Message = "Success.",
-            Data = data ?? throw new NotFoundException("Family not found."),
+            Data = data,
             TraceId = HttpContext.TraceIdentifier
         });
     }

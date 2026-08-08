@@ -22,6 +22,7 @@
 \i 06_Triggers/Patch.sql
 
 \echo '=== Patch 07_Procedures ==='
+\i 07_Procedures/DropLegacyFunctions.sql
 \i 07_Procedures/Account/Patch.sql
 \i 07_Procedures/Family/Patch.sql
 \i 07_Procedures/Member/Patch.sql

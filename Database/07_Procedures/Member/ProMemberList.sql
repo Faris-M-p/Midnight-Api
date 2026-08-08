@@ -1,14 +1,12 @@
-CREATE OR REPLACE FUNCTION "ProMemberList"(
+CREATE OR REPLACE PROCEDURE "ProMemberList"(
     p_family_id BIGINT,
     p_search    VARCHAR DEFAULT NULL,
     p_gender    VARCHAR DEFAULT NULL,
     p_sort_by   VARCHAR DEFAULT 'firstname',
     p_sort_desc BOOLEAN DEFAULT FALSE,
     p_page      INTEGER DEFAULT 1,
-    p_page_size INTEGER DEFAULT 20
-)
-RETURNS TABLE (
-    "Payload" JSONB
+    p_page_size INTEGER DEFAULT 20,
+    INOUT p_payload JSONB DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
@@ -107,7 +105,7 @@ BEGIN
     INTO v_items
     FROM ordered o;
 
-    RETURN QUERY SELECT jsonb_build_object(
+    p_payload := jsonb_build_object(
         'Items', v_items,
         'Page', v_page,
         'PageSize', v_size,

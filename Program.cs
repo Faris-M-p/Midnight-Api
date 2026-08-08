@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using MidnightApi.Auth;
-using MidnightApi.Data;
 using MidnightApi.DataAccess;
 using MidnightApi.Filters;
 using MidnightApi.Interfaces;
@@ -27,9 +26,6 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 });
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("DefaultConnection is missing in appsettings.");
-
 builder.Services.AddScoped<IDataAccessDapper, DataAccessDapper>();
 builder.Services.AddScoped<IFamiliesRepository, FamiliesRepository>();
 builder.Services.AddScoped<IMembersRepository, MembersRepository>();
@@ -39,8 +35,6 @@ builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddSingleton<JwtTokenService>();
 
 var app = builder.Build();
-
-await DatabaseInitializer.EnsureDatabaseAsync(connectionString);
 
 app.UseGlobalExceptionHandling();
 app.UseSwaggerDocumentation();

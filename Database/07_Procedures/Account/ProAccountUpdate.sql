@@ -1,14 +1,12 @@
-CREATE OR REPLACE FUNCTION "ProAccountUpdate"(
+CREATE OR REPLACE PROCEDURE "ProAccountUpdate"(
     p_id            BIGINT,
     p_username      VARCHAR,
     p_email         VARCHAR,
     p_password_hash VARCHAR,
-    p_updated_by    VARCHAR
-)
-RETURNS TABLE (
-    "ResponseCode"    INTEGER,
-    "StatusCode"      INTEGER,
-    "ResponseMessage" VARCHAR
+    p_updated_by    VARCHAR,
+    INOUT p_response_code INTEGER DEFAULT 0,
+    INOUT p_status_code INTEGER DEFAULT 0,
+    INOUT p_response_message VARCHAR DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
@@ -19,7 +17,9 @@ BEGIN
         WHERE a."ID_UserAccounts" = p_id
           AND a."IsCancelled" = FALSE
     ) THEN
-        RETURN QUERY SELECT 1, 404, 'Account not found.'::VARCHAR;
+        p_response_code := 1;
+        p_status_code := 404;
+        p_response_message := 'Account not found.';
         RETURN;
     END IF;
 
@@ -30,7 +30,9 @@ BEGIN
           AND a."IsCancelled" = FALSE
           AND a."ID_UserAccounts" <> p_id
     ) THEN
-        RETURN QUERY SELECT 2, 409, 'Username already exists.'::VARCHAR;
+        p_response_code := 2;
+        p_status_code := 409;
+        p_response_message := 'Username already exists.';
         RETURN;
     END IF;
 
@@ -43,6 +45,12 @@ BEGIN
     WHERE a."ID_UserAccounts" = p_id
       AND a."IsCancelled" = FALSE;
 
-    RETURN QUERY SELECT 0, 200, 'Account updated successfully.'::VARCHAR;
+    p_response_code := 0;
+    p_status_code := 200;
+    p_response_message := 'Account updated successfully.';
+EXCEPTION WHEN OTHERS THEN
+    p_response_code := 99;
+    p_status_code := 500;
+    p_response_message := SQLERRM;
 END;
 $$;

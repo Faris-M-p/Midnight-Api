@@ -1,11 +1,14 @@
-CREATE OR REPLACE FUNCTION "ProMemberGetParentId"(
-    p_member_id BIGINT
+CREATE OR REPLACE PROCEDURE "ProMemberGetParentId"(
+    p_member_id BIGINT,
+    INOUT p_payload JSONB DEFAULT NULL
 )
-RETURNS BIGINT
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
-    SELECT m."FK_Members_Parent"
+BEGIN
+    SELECT to_jsonb(m."FK_Members_Parent")
+    INTO p_payload
     FROM "Members" m
     WHERE m."ID_Members" = p_member_id
       AND m."IsCancelled" = FALSE;
+END;
 $$;

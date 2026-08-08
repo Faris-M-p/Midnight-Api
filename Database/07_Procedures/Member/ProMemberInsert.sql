@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION "ProMemberInsert"(
+CREATE OR REPLACE PROCEDURE "ProMemberInsert"(
     p_family_id   BIGINT,
     p_parent_id   BIGINT,
     p_spouse_id   BIGINT,
@@ -18,12 +18,10 @@ CREATE OR REPLACE FUNCTION "ProMemberInsert"(
     p_events      JSONB,
     p_notes       JSONB,
     p_social_links JSONB,
-    p_created_by  VARCHAR
-)
-RETURNS TABLE (
-    "ResponseCode"    INTEGER,
-    "StatusCode"      INTEGER,
-    "ResponseMessage" VARCHAR
+    p_created_by  VARCHAR,
+    INOUT p_response_code INTEGER DEFAULT 0,
+    INOUT p_status_code INTEGER DEFAULT 0,
+    INOUT p_response_message VARCHAR DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
@@ -39,7 +37,9 @@ BEGIN
     FROM "FnMemberValidateSave"(p_family_id, NULL, p_parent_id, p_spouse_id, p_is_root) v;
 
     IF v_code <> 0 THEN
-        RETURN QUERY SELECT v_code, v_status, v_message;
+        p_response_code := v_code;
+        p_status_code := v_status;
+        p_response_message := v_message;
         RETURN;
     END IF;
 
@@ -165,6 +165,12 @@ BEGIN
           AND "IsCancelled" = FALSE;
     END IF;
 
-    RETURN QUERY SELECT 0, 201, 'Member created successfully.'::VARCHAR;
+    p_response_code := 0;
+    p_status_code := 201;
+    p_response_message := 'Member created successfully.';
+EXCEPTION WHEN OTHERS THEN
+    p_response_code := 99;
+    p_status_code := 500;
+    p_response_message := SQLERRM;
 END;
 $$;

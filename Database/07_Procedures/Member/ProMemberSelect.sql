@@ -1,14 +1,11 @@
-CREATE OR REPLACE FUNCTION "ProMemberSelect"(
+CREATE OR REPLACE PROCEDURE "ProMemberSelect"(
     p_family_id BIGINT,
-    p_member_id BIGINT
-)
-RETURNS TABLE (
-    "Payload" JSONB
+    p_member_id BIGINT,
+    INOUT p_payload JSONB DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    RETURN QUERY
     SELECT jsonb_build_object(
         'Id', m."ID_Members",
         'FirstName', m."FirstName",
@@ -159,6 +156,7 @@ BEGIN
               AND s."IsCancelled" = FALSE
         ), '[]'::jsonb)
     )
+    INTO p_payload
     FROM "Members" m
     WHERE m."ID_Members" = p_member_id
       AND m."FK_Families" = p_family_id

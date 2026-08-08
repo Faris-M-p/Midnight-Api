@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION "ProMemberUpdate"(
+CREATE OR REPLACE PROCEDURE "ProMemberUpdate"(
     p_family_id    BIGINT,
     p_member_id    BIGINT,
     p_parent_id    BIGINT,
@@ -19,12 +19,10 @@ CREATE OR REPLACE FUNCTION "ProMemberUpdate"(
     p_events       JSONB,
     p_notes        JSONB,
     p_social_links JSONB,
-    p_updated_by   VARCHAR
-)
-RETURNS TABLE (
-    "ResponseCode"    INTEGER,
-    "StatusCode"      INTEGER,
-    "ResponseMessage" VARCHAR
+    p_updated_by   VARCHAR,
+    INOUT p_response_code INTEGER DEFAULT 0,
+    INOUT p_status_code INTEGER DEFAULT 0,
+    INOUT p_response_message VARCHAR DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
@@ -41,7 +39,9 @@ BEGIN
     FROM "FnMemberValidateSave"(p_family_id, p_member_id, p_parent_id, p_spouse_id, p_is_root) v;
 
     IF v_code <> 0 THEN
-        RETURN QUERY SELECT v_code, v_status, v_message;
+        p_response_code := v_code;
+        p_status_code := v_status;
+        p_response_message := v_message;
         RETURN;
     END IF;
 
@@ -51,7 +51,9 @@ BEGIN
           AND "FK_Families" = p_family_id
           AND "IsCancelled" = FALSE
     ) THEN
-        RETURN QUERY SELECT 1, 404, 'Member not found.'::VARCHAR;
+        p_response_code := 1;
+        p_status_code := 404;
+        p_response_message := 'Member not found.';
         RETURN;
     END IF;
 
@@ -331,6 +333,12 @@ BEGIN
           AND "IsCancelled" = FALSE;
     END IF;
 
-    RETURN QUERY SELECT 0, 200, 'Member updated successfully.'::VARCHAR;
+    p_response_code := 0;
+    p_status_code := 200;
+    p_response_message := 'Member updated successfully.';
+EXCEPTION WHEN OTHERS THEN
+    p_response_code := 99;
+    p_status_code := 500;
+    p_response_message := SQLERRM;
 END;
 $$;

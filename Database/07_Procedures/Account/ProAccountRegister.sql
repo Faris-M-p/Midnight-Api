@@ -1,16 +1,14 @@
-CREATE OR REPLACE FUNCTION "ProAccountRegister"(
+CREATE OR REPLACE PROCEDURE "ProAccountRegister"(
     p_family_code   VARCHAR,
     p_family_name   VARCHAR,
     p_description   VARCHAR,
     p_username      VARCHAR,
     p_email         VARCHAR,
     p_password_hash VARCHAR,
-    p_created_by    VARCHAR
-)
-RETURNS TABLE (
-    "ResponseCode"    INTEGER,
-    "StatusCode"      INTEGER,
-    "ResponseMessage" VARCHAR
+    p_created_by    VARCHAR,
+    INOUT p_response_code INTEGER DEFAULT 0,
+    INOUT p_status_code INTEGER DEFAULT 0,
+    INOUT p_response_message VARCHAR DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
@@ -23,7 +21,9 @@ BEGIN
         WHERE a."Username" = p_username
           AND a."IsCancelled" = FALSE
     ) THEN
-        RETURN QUERY SELECT 1, 409, 'Username already exists.'::VARCHAR;
+        p_response_code := 1;
+        p_status_code := 409;
+        p_response_message := 'Username already exists.';
         RETURN;
     END IF;
 
@@ -33,7 +33,9 @@ BEGIN
         WHERE f."FamilyCode" = p_family_code
           AND f."IsCancelled" = FALSE
     ) THEN
-        RETURN QUERY SELECT 2, 409, 'Family code already exists.'::VARCHAR;
+        p_response_code := 2;
+        p_status_code := 409;
+        p_response_message := 'Family code already exists.';
         RETURN;
     END IF;
 
@@ -48,6 +50,12 @@ BEGIN
         v_family_id, p_username, p_email, p_password_hash, TRUE, p_created_by, NOW()
     );
 
-    RETURN QUERY SELECT 0, 201, 'Account registered successfully.'::VARCHAR;
+    p_response_code := 0;
+    p_status_code := 201;
+    p_response_message := 'Account registered successfully.';
+EXCEPTION WHEN OTHERS THEN
+    p_response_code := 99;
+    p_status_code := 500;
+    p_response_message := SQLERRM;
 END;
 $$;

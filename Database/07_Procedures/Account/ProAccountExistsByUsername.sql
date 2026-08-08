@@ -1,15 +1,17 @@
-CREATE OR REPLACE FUNCTION "ProAccountExistsByUsername"(
+CREATE OR REPLACE PROCEDURE "ProAccountExistsByUsername"(
     p_username   VARCHAR,
-    p_exclude_id BIGINT DEFAULT NULL
+    p_exclude_id BIGINT DEFAULT NULL,
+    INOUT p_payload JSONB DEFAULT NULL
 )
-RETURNS BOOLEAN
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
-    SELECT EXISTS (
+BEGIN
+    SELECT to_jsonb(EXISTS (
         SELECT 1
         FROM "UserAccounts" a
         WHERE a."Username" = p_username
           AND a."IsCancelled" = FALSE
           AND (p_exclude_id IS NULL OR a."ID_UserAccounts" <> p_exclude_id)
-    );
+    )) INTO p_payload;
+END;
 $$;

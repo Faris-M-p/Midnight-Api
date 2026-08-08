@@ -1,8 +1,6 @@
-CREATE OR REPLACE FUNCTION "ProMemberTree"(
-    p_family_id BIGINT
-)
-RETURNS TABLE (
-    "Payload" JSONB
+CREATE OR REPLACE PROCEDURE "ProMemberTree"(
+    p_family_id BIGINT,
+    INOUT p_payload JSONB DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
@@ -24,7 +22,7 @@ BEGIN
     LIMIT 1;
 
     IF v_root_id IS NULL THEN
-        RETURN QUERY SELECT jsonb_build_object(
+        p_payload := jsonb_build_object(
             'Root', NULL,
             'TotalMembers', v_total
         );
@@ -33,7 +31,7 @@ BEGIN
 
     v_root := "FnBuildTreeNode"(v_root_id, TRUE);
 
-    RETURN QUERY SELECT jsonb_build_object(
+    p_payload := jsonb_build_object(
         'Root', v_root,
         'TotalMembers', v_total
     );

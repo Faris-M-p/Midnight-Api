@@ -1,3 +1,4 @@
+-- Uncomment to update family PROCEDURES.
 -- \i ProFamilySelect.sql
 -- \i ProFamilyInsert.sql
 -- \i ProFamilyUpdate.sql

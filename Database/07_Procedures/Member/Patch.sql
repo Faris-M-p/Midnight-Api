@@ -1,3 +1,4 @@
+-- Uncomment to update member PROCEDURES.
 -- \i ProMemberList.sql
 -- \i ProMemberTree.sql
 -- \i ProMemberSelect.sql
