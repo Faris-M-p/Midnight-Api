@@ -119,7 +119,17 @@ public class MemberController : ControllerBase
             CreatedBy = User.GetUsername()
         });
 
-        return _commonService.ToActionResult(result, HttpContext.TraceIdentifier, StatusCodes.Status201Created);
+        _commonService.EnsureSuccess(result);
+        var profile = await LoadMemberOrThrow(ResolveMemberId(result));
+
+        return StatusCode(StatusCodes.Status201Created, new ApiResponse<OutputGetMember>
+        {
+            Success = true,
+            StatusCode = StatusCodes.Status201Created,
+            Message = result.ResponseMessage ?? "Member created successfully.",
+            Data = profile,
+            TraceId = HttpContext.TraceIdentifier
+        });
     }
 
     [HttpPut("{id:long}")]
@@ -154,7 +164,17 @@ public class MemberController : ControllerBase
             UpdatedBy = User.GetUsername()
         });
 
-        return _commonService.ToActionResult(result, HttpContext.TraceIdentifier);
+        _commonService.EnsureSuccess(result);
+        var profile = await LoadMemberOrThrow(route.Id);
+
+        return Ok(new ApiResponse<OutputGetMember>
+        {
+            Success = true,
+            StatusCode = StatusCodes.Status200OK,
+            Message = result.ResponseMessage ?? "Member updated successfully.",
+            Data = profile,
+            TraceId = HttpContext.TraceIdentifier
+        });
     }
 
     [HttpDelete("{id:long}")]
@@ -186,5 +206,29 @@ public class MemberController : ControllerBase
         });
 
         return _commonService.ToActionResult(result, HttpContext.TraceIdentifier);
+    }
+
+    private async Task<OutputGetMember> LoadMemberOrThrow(long memberId)
+    {
+        return await _members.GetByIdAsync(new InputGetMember
+        {
+            FamilyId = User.GetFamilyId(),
+            MemberId = memberId
+        }) ?? throw new NotFoundException("Member not found.");
+    }
+
+    private static long ResolveMemberId(OutputCreateMember result)
+    {
+        if (result.Data?.Id > 0)
+        {
+            return result.Data.Id;
+        }
+
+        if (result.ResponseCode > 0)
+        {
+            return result.ResponseCode;
+        }
+
+        throw new BadRequestException(result.ResponseMessage ?? "Member save failed.");
     }
 }

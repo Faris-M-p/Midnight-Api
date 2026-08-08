@@ -20,6 +20,8 @@ BEGIN
         m."DateOfDeath" AS dod,
         m."IsRoot" AS is_root,
         m."Nickname" AS nickname,
+        m."Profession" AS profession,
+        m."Biography" AS biography,
         m."FK_Members_Spouse" AS spouse_id,
         (
             SELECT i."ImageUrl"
@@ -62,6 +64,8 @@ BEGIN
         'DateOfDeath', v_row.dod,
         'IsRoot', v_row.is_root,
         'Nickname', v_row.nickname,
+        'Profession', v_row.profession,
+        'Biography', v_row.biography,
         'PhotoUrl', v_row.photo_url,
         'Spouse', v_spouse,
         'Children', v_children

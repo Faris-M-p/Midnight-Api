@@ -25,7 +25,8 @@ BEGIN
           AND (v_term IS NULL
                OR LOWER(m."FirstName") LIKE '%' || v_term || '%'
                OR LOWER(m."LastName") LIKE '%' || v_term || '%'
-               OR LOWER(m."FirstName" || ' ' || m."LastName") LIKE '%' || v_term || '%')
+               OR LOWER(m."FirstName" || ' ' || m."LastName") LIKE '%' || v_term || '%'
+               OR LOWER(COALESCE(m."Nickname", '')) LIKE '%' || v_term || '%')
           AND ("p_Gender" IS NULL OR "p_Gender" = '' OR m."Gender" = "p_Gender")
     )
     SELECT COUNT(*)::INTEGER INTO "p_TotalCount" FROM filtered;
@@ -54,7 +55,8 @@ BEGIN
       AND (v_term IS NULL
            OR LOWER(m."FirstName") LIKE '%' || v_term || '%'
            OR LOWER(m."LastName") LIKE '%' || v_term || '%'
-           OR LOWER(m."FirstName" || ' ' || m."LastName") LIKE '%' || v_term || '%')
+           OR LOWER(m."FirstName" || ' ' || m."LastName") LIKE '%' || v_term || '%'
+           OR LOWER(COALESCE(m."Nickname", '')) LIKE '%' || v_term || '%')
       AND ("p_Gender" IS NULL OR "p_Gender" = '' OR m."Gender" = "p_Gender")
     ORDER BY
         CASE WHEN v_sort = 'lastname' AND NOT "p_SortDesc" THEN m."LastName" END ASC NULLS LAST,

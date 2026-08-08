@@ -581,6 +581,8 @@ public class OutputTreeNode
     public DateOnly? DateOfDeath { get; set; }
     public bool IsRoot { get; set; }
     public string? Nickname { get; set; }
+    public string? Profession { get; set; }
+    public string? Biography { get; set; }
     public string? PhotoUrl { get; set; }
     public OutputTreeNode? Spouse { get; set; }
     public List<OutputTreeNode> Children { get; set; } = [];
