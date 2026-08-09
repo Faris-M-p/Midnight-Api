@@ -1,14 +1,14 @@
 -- Uncomment to update member PROCEDURES.
-\i ProMemberList.sql
-\i ProMemberTree.sql
-\i ProMemberSelect.sql
-\i ProMemberInsert.sql
-\i ProMemberUpdate.sql
-\i ProMemberDelete.sql
-\i ProMemberMapSpouse.sql
-\i ProMemberDashboard.sql
-\i ProMemberTimeline.sql
-\i ProMemberExistsInFamily.sql
-\i ProMemberHasRoot.sql
-\i ProMemberGetParentId.sql
-\i ProMemberGetRelation.sql
+-- \ir ProMemberList.sql
+-- \ir ProMemberTree.sql
+-- \ir ProMemberSelect.sql
+-- \ir ProMemberInsert.sql
+-- \ir ProMemberUpdate.sql
+-- \ir ProMemberDelete.sql
+-- \ir ProMemberMapSpouse.sql
+-- \ir ProMemberDashboard.sql
+-- \ir ProMemberTimeline.sql
+-- \ir ProMemberExistsInFamily.sql
+-- \ir ProMemberHasRoot.sql
+-- \ir ProMemberGetParentId.sql
+-- \ir ProMemberGetRelation.sql

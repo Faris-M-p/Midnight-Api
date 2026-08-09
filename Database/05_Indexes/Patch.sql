@@ -1,1 +1,1 @@
--- \i MemberIndexes.sql
+-- \ir MemberIndexes.sql

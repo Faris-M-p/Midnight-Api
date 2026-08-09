@@ -1,6 +1,6 @@
--- Uncomment to update reusable FUNCTIONS only.
-\i FnGetGeneration.sql
-\i FnGetRelationship.sql
-\i FnMemberValidateSave.sql
-\i FnMemberValidateMapSpouse.sql
-\i FnBuildTreeNode.sql
+-- Uncomment only the required changes.
+-- \ir FnGetGeneration.sql
+-- \ir FnGetRelationship.sql
+-- \ir FnMemberValidateSave.sql
+-- \ir FnMemberValidateMapSpouse.sql
+-- \ir FnBuildTreeNode.sql

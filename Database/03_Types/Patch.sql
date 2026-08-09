@@ -1,2 +1,2 @@
--- \i EventType.sql
--- \i NotificationType.sql
+-- \ir EventType.sql
+-- \ir NotificationType.sql

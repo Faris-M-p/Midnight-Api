@@ -1,0 +1,865 @@
+Midnight Chronicle — Final Application Architecture
+1. Application Concept
+
+Midnight Chronicle is a private family legacy platform.
+
+The main purpose is to allow a family to:
+
+Build and maintain a family tree
+Manage family members
+Preserve family information
+Record family history
+Store family stories and memories
+Maintain photos and albums
+Track important events
+Receive family notifications
+View family statistics
+Provide controlled access through secure family tokens
+
+There is one application, not separate Admin and User applications.
+
+The difference between users is based on their authentication and permissions.
+
+2. Authentication Types
+
+The application supports two ways to enter the family application.
+
+Normal Account
+Username
+Password
+    ↓
+Login
+    ↓
+Family Application
+Family Access Token
+Family Token
+    ↓
+Validate Token
+    ↓
+Check Expiry
+    ↓
+Check Permission
+    ↓
+Check Scope
+    ↓
+Family Application
+
+The same application UI is used after login.
+
+The available actions depend on the user's permission.
+
+3. Public Area
+
+Before authentication:
+
+Public
+│
+├── Home
+├── Features
+├── About
+├── Login
+└── Register
+Home
+
+The public landing page introduces Midnight Chronicle.
+
+It should contain only general information about the product.
+
+Do not display real family information or private member data.
+
+Sections can include:
+
+Introduction
+Family Tree concept
+Family history
+Stories
+Gallery
+Events
+Notifications
+Secure family access
+Call to action
+4. Main Application
+
+After successful authentication, every user enters the same application.
+
+The primary navigation is:
+
+Home
+Family
+Members
+Family Tree
+Stories
+Gallery
+Timeline
+Events
+
+There is no Dashboard.
+
+The first page is called Home.
+
+5. Home
+
+Home is the main landing page after login.
+
+It should be a simple family-oriented overview, not a business analytics dashboard.
+
+Show things such as:
+
+Family cover image
+Family logo
+Family name
+Short family description
+Total members
+Number of generations
+Upcoming family events
+Recent family activity
+Recent stories
+Important dates
+
+Example:
+
+Home
+│
+├── Family Cover
+├── Family Name
+├── Family Overview
+├── Member Count
+├── Generations
+├── Upcoming Events
+├── Important Dates
+├── Recent Stories
+└── Recent Family Activity
+
+The Home page should answer:
+
+"What is happening with my family?"
+
+6. Family
+
+The Family module represents the family itself.
+
+This is not the member-management module.
+
+Family
+│
+├── Family Information
+├── Family Logo
+├── Family Cover
+├── Family Name
+├── Family Code
+├── Description
+├── Family History
+├── Family Origin
+└── Other Family Information
+
+Users can view the information.
+
+Users with appropriate permission can edit it.
+
+Family Edit
+Family
+   ↓
+Edit Family
+   ↓
+Update
+
+Family logo and cover image management also belong here.
+
+7. Members
+
+The Members module is for managing a large list of family members.
+
+Example:
+
+Members
+
+150 Members
+
+[ Search ] [ Filter ] [ Sort ] [ Add Member ]
+
+Member List
+
+The page should support:
+
+Search
+Filtering
+Sorting
+Pagination
+View
+Edit
+Delete
+Add Member
+
+The member list can display:
+
+Photo
+Name
+Nickname
+Relationship
+Date of Birth
+Status
+Location
+Actions
+Member search
+
+Search by things such as:
+
+Name
+Nickname
+Relationship
+Location
+8. Add Member
+
+Add Member should be quick and simple.
+
+Do not make it a huge form.
+
+The purpose is to create the member and place them correctly into the family tree.
+
+Basic information:
+
+Profile Image
+First Name
+Last Name
+Nickname
+Date of Birth
+Alive / Deceased
+Date of Death
+
+Relationship:
+
+Root Member
+Child
+Spouse
+
+If Child:
+
+Parent Couple
+
+Example:
+
+Ramesh + Savita
+
+If Spouse:
+
+Spouse Of
+
+Only valid relationship candidates should be shown.
+
+After saving:
+
+Save Member
+     ↓
+API
+     ↓
+Member Created
+     ↓
+Members List Updated
+     ↓
+Family Tree Updated
+9. Member Details
+
+Full member information belongs in Member Details, not Add Member.
+
+Member Details can contain:
+
+Member Details
+│
+├── Basic Information
+├── Biography
+├── Contact
+├── Location
+├── Education
+├── Career
+├── Social Links
+├── Family Relationships
+├── Photos
+├── Memories
+├── Events
+└── Notes
+
+Actions:
+
+Edit
+Delete
+View in Family Tree
+10. Family Tree
+
+The Family Tree is the central feature of the application.
+
+It is different from Members.
+
+Members
+
+Used for:
+
+Searching
+Filtering
+Managing
+Editing
+Deleting
+Family Tree
+
+Used for:
+
+Understanding family relationships
+Viewing generations
+Viewing parents
+Viewing spouses
+Viewing children
+Navigating family structure
+Tree Structure
+
+Generations must remain hierarchical.
+
+Generation 1
+       │
+       ▼
+Generation 2
+       │
+       ▼
+Generation 3
+       │
+       ▼
+Generation 4
+
+The tree must maintain the previously defined relationship rules.
+
+Parent → Child
+
+The parent connection must connect to the actual child's card center.
+
+It must not connect to the spouse.
+
+Spouse
+
+Spouses are connected horizontally.
+
+Member A ─ ─ ─ ─ Member B
+Children
+
+Children originate from the center of the couple/spouse connection.
+
+Expand / Collapse
+
+The expand/collapse control belongs at the center of the spouse connection.
+
+The tree should support:
+
+Zoom
+Pan
+Fit tree
+Search
+Expand
+Collapse
+Generation navigation
+
+Clicking a member card opens the same Member Details component used from the Members module.
+
+11. Stories
+
+Family Stories is the family blog/history section.
+
+Stories
+│
+├── Story List
+├── Story Details
+├── Create Story
+├── Edit Story
+└── Publish / Unpublish
+
+A story can contain:
+
+Title
+Description
+Full content
+Cover image
+Multiple images
+Related members
+Related events
+Date
+Author
+
+Purpose:
+
+Preserve and share family stories.
+
+12. Gallery
+
+Gallery is the family's visual memory archive.
+
+Gallery
+│
+├── Albums
+├── Album Details
+├── Photos
+└── Photo Viewer
+
+Support:
+
+Multiple albums
+Multiple photos
+Upload
+Delete
+Album management
+Related members
+Related events
+13. Timeline
+
+Timeline represents the historical sequence of the family.
+
+Examples:
+
+1965
+Birth
+
+1984
+Education
+
+1988
+Marriage
+
+1990
+Child born
+
+2005
+Family migration
+
+2015
+Family achievement
+
+Categories can include:
+
+Birth
+Marriage
+Education
+Career
+Migration
+Achievement
+Death
+Family event
+14. Events
+
+Events represent important family dates and activities.
+
+Events
+│
+├── Upcoming Events
+├── Past Events
+├── Event Details
+├── Create Event
+└── Edit Event
+
+Examples:
+
+Birthday
+Marriage anniversary
+Memorial
+Family gathering
+Achievement
+Custom event
+
+Event information:
+
+Title
+Type
+Date
+Time
+Location
+Description
+Related members
+Images
+15. Notifications
+
+Notifications are not a navigation menu item.
+
+There is no separate Notifications page in the main navigation.
+
+Instead, notifications are always available from the top bar.
+
+🔔
+
+The bell shows the unread count.
+
+Clicking it opens a notification drawer.
+
+Example:
+
+🔔 3
+
+Birthday
+Ramesh's birthday is today.
+
+Anniversary
+Ramesh & Savita's anniversary is today.
+
+New Story
+A new family story was published.
+
+Clicking a notification redirects to the relevant content.
+
+For example:
+
+Birthday Notification
+        ↓
+Ramesh
+        ↓
+Member Details
+
+or:
+
+New Story
+   ↓
+Story Details
+
+or:
+
+Family Event
+   ↓
+Event Details
+16. Top Header
+
+There is no traditional user Profile concept.
+
+The top-right area contains:
+
+🔔   Family Logo + Family Name   ⋮
+Family Logo + Name
+
+Clicking it opens:
+
+Family Details
+
+and authorized users can access:
+
+Edit Family
+Notification
+🔔
+
+opens the notification drawer.
+
+More
+⋮
+   └── Logout
+
+The More menu does not need a Profile page.
+
+17. Logout
+
+Logout is available through the top-right menu.
+
+⋮
+  ↓
+Logout
+
+Logout should:
+
+Clear authentication token
+Clear session
+Clear authentication state
+Redirect to Login
+Prevent access to protected pages without authentication
+18. Administration
+
+There is no separate Admin application.
+
+There is no Admin Dashboard.
+
+There is no separate Admin Home.
+
+There is only an additional Administration section shown to users who have the required administrative permission.
+
+Main application remains:
+
+Home
+Family
+Members
+Family Tree
+Stories
+Gallery
+Timeline
+Events
+
+Then, for administrators:
+
+────────────────────
+
+Administration
+
+Access Tokens
+19. Access Token Management
+
+This is the primary Administration module.
+
+Administration
+      ↓
+Access Tokens
+
+The admin can:
+
+Generate token
+View tokens
+View token details
+Set permissions
+Set access scope
+Set expiry
+Extend expiry
+Deactivate token
+Reactivate if allowed
+Revoke token
+View token usage/activity
+20. Token Permissions
+
+When generating a token, the administrator can define:
+
+Permission
+View
+Edit
+Scope
+Entire Family
+
+OR
+
+Selected Member
+
+OR
+
+Selected Member + Descendants
+
+Example:
+
+Token
+  ↓
+Member #25
+  ↓
+Edit
+  ↓
+Member #25 + Descendants
+
+The token user can only perform operations allowed by the assigned permission and scope.
+
+21. Token Usage
+
+The Access Token module should also provide information about token usage.
+
+For each token:
+
+Token
+Status
+Permission
+Scope
+Created Date
+Expiry Date
+Last Used
+Active Sessions
+Usage Count
+
+Later this can show:
+
+Who used the token
+Number of active sessions
+Last activity
+Members accessed
+Member branches accessed
+Login history
+22. Permission-Aware UI
+
+The same application is displayed to everyone.
+
+But available actions depend on authentication.
+
+View Token
+Can view
+
+Cannot:
+Add
+Edit
+Delete
+Edit Token
+Can view
+Can edit permitted scope
+
+Cannot edit outside scope
+Cannot perform unauthorized operations
+Admin
+Full permitted access
++
+Administration
+    └── Access Tokens
+
+This should be enforced by both:
+
+Frontend UI permissions
+
+and
+
+Backend authorization.
+
+The frontend should never be the only security layer.
+
+23. Final Navigation Architecture
+Public
+PUBLIC
+│
+├── Home
+├── Features
+├── About
+├── Login
+└── Register
+Authenticated User
+FAMILY APPLICATION
+│
+├── Home
+├── Family
+├── Members
+├── Family Tree
+├── Stories
+├── Gallery
+├── Timeline
+└── Events
+
+Top-right:
+
+🔔 Notifications
+🏠 Family
+⋮ Logout
+Administrator
+
+Same application:
+
+FAMILY APPLICATION
+│
+├── Home
+├── Family
+├── Members
+├── Family Tree
+├── Stories
+├── Gallery
+├── Timeline
+├── Events
+│
+└── Administration
+       │
+       └── Access Tokens
+24. Mobile Architecture
+
+Mobile should not attempt to display the entire desktop navigation.
+
+Top:
+
+┌────────────────────────────┐
+│ ☰   Family Logo    🔔      │
+└────────────────────────────┘
+
+Menu:
+
+Home
+Family
+Members
+Family Tree
+Stories
+Gallery
+Timeline
+Events
+
+──────────────
+
+Administration
+Access Tokens
+
+Notifications remain accessible through the bell.
+
+Family identity remains accessible through the family logo/name.
+
+Logout remains inside the menu.
+
+25. Final Module Map
+MIDNIGHT CHRONICLE
+│
+├── PUBLIC
+│   ├── Home
+│   ├── Features
+│   ├── About
+│   ├── Login
+│   └── Register
+│
+└── FAMILY APPLICATION
+    │
+    ├── Home
+    │
+    ├── Family
+    │   ├── Family Details
+    │   └── Edit Family
+    │
+    ├── Members
+    │   ├── Member List
+    │   ├── Add Member
+    │   ├── Member Details
+    │   └── Edit Member
+    │
+    ├── Family Tree
+    │
+    ├── Stories
+    │   ├── Story List
+    │   ├── Story Details
+    │   ├── Create Story
+    │   └── Edit Story
+    │
+    ├── Gallery
+    │   ├── Albums
+    │   └── Photos
+    │
+    ├── Timeline
+    │
+    ├── Events
+    │   ├── Event List
+    │   ├── Event Details
+    │   ├── Create Event
+    │   └── Edit Event
+    │
+    ├── Notifications
+    │   └── Top-bar Drawer
+    │
+    └── Administration
+        │
+        └── Access Tokens
+            ├── Token List
+            ├── Generate Token
+            ├── Token Details
+            ├── Permissions
+            ├── Scope
+            ├── Expiry
+            ├── Activate / Deactivate
+            └── Usage / Activity
+The final principle
+
+The application should stay simple from the user's point of view:
+
+Home → Family → Members → Tree → Stories → Gallery → Timeline → Events
+
+Everything else is supporting functionality.
+
+Notifications stay in the header.
+Family identity stays in the header.
+Logout stays in the header menu.
+Admin does not get a separate dashboard.
+Admin only gets Administration → Access Tokens when authorized.
+Members and Family Tree remain separate because they serve different purposes.
+Add Member stays simple; Edit Member contains the complete information.
+
+This is the structure I would now treat as the final product architecture before moving into individual page UI design.
+
+
+
+SELECT 
+    pid AS process_id,
+    usename AS user_name,
+    client_addr AS source_ip,
+    application_name,
+    state,
+    query AS executed_query,
+    query_start AS request_time
+FROM pg_stat_activity
+WHERE state != 'idle' 
+  AND pid != pg_backend_pid()
+ORDER BY query_start DESC;

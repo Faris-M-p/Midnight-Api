@@ -1,6 +1,10 @@
+DROP FUNCTION IF EXISTS "FnBuildTreeNode"(BIGINT, BOOLEAN);
+DROP FUNCTION IF EXISTS "FnBuildTreeNode"(BIGINT, BOOLEAN, BIGINT[]);
+
 CREATE OR REPLACE FUNCTION "FnBuildTreeNode"(
-    p_member_id       BIGINT,
-    p_include_children BOOLEAN
+    p_member_id        BIGINT,
+    p_include_children BOOLEAN DEFAULT TRUE,
+    p_visited          BIGINT[] DEFAULT ARRAY[]::BIGINT[]
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -9,7 +13,22 @@ DECLARE
     v_row RECORD;
     v_spouse JSONB;
     v_children JSONB;
+    v_visited BIGINT[];
 BEGIN
+    IF p_member_id IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    IF p_member_id = ANY(COALESCE(p_visited, ARRAY[]::BIGINT[])) THEN
+        RETURN NULL;
+    END IF;
+
+    IF COALESCE(array_length(p_visited, 1), 0) > 50 THEN
+        RETURN NULL;
+    END IF;
+
+    v_visited := array_append(COALESCE(p_visited, ARRAY[]::BIGINT[]), p_member_id);
+
     SELECT
         m."ID_Members" AS id,
         m."FirstName" AS first_name,
@@ -40,18 +59,54 @@ BEGIN
         RETURN NULL;
     END IF;
 
+    -- Spouse is a leaf node only. Never recurse into spouse.spouse
+    -- (mutual FK_Members_Spouse links would otherwise overflow the stack).
     v_spouse := NULL;
-    IF v_row.spouse_id IS NOT NULL THEN
-        v_spouse := "FnBuildTreeNode"(v_row.spouse_id, FALSE);
+    IF v_row.spouse_id IS NOT NULL
+       AND NOT (v_row.spouse_id = ANY(v_visited)) THEN
+        SELECT jsonb_build_object(
+            'Id', s."ID_Members",
+            'FirstName', s."FirstName",
+            'LastName', s."LastName",
+            'FullName', s."FirstName" || ' ' || s."LastName",
+            'Gender', s."Gender",
+            'DateOfBirth', s."DateOfBirth",
+            'DateOfDeath', s."DateOfDeath",
+            'IsRoot', s."IsRoot",
+            'Nickname', s."Nickname",
+            'Profession', s."Profession",
+            'Biography', s."Biography",
+            'PhotoUrl', (
+                SELECT i."ImageUrl"
+                FROM "MemberImages" i
+                WHERE i."FK_Members" = s."ID_Members"
+                  AND i."IsCancelled" = FALSE
+                ORDER BY i."IsPrimary" DESC, i."SortOrder" ASC
+                LIMIT 1
+            ),
+            'Spouse', NULL,
+            'Children', '[]'::jsonb
+        )
+        INTO v_spouse
+        FROM "Members" s
+        WHERE s."ID_Members" = v_row.spouse_id
+          AND s."IsCancelled" = FALSE;
     END IF;
 
     v_children := '[]'::jsonb;
     IF p_include_children THEN
-        SELECT COALESCE(jsonb_agg("FnBuildTreeNode"(c."ID_Members", TRUE) ORDER BY c."ID_Members"), '[]'::jsonb)
+        SELECT COALESCE(jsonb_agg(x.node ORDER BY x.id), '[]'::jsonb)
         INTO v_children
-        FROM "Members" c
-        WHERE c."FK_Members_Parent" = p_member_id
-          AND c."IsCancelled" = FALSE;
+        FROM (
+            SELECT
+                c."ID_Members" AS id,
+                "FnBuildTreeNode"(c."ID_Members", TRUE, v_visited) AS node
+            FROM "Members" c
+            WHERE c."FK_Members_Parent" = p_member_id
+              AND c."IsCancelled" = FALSE
+              AND NOT (c."ID_Members" = ANY(v_visited))
+        ) x
+        WHERE x.node IS NOT NULL;
     END IF;
 
     RETURN jsonb_build_object(

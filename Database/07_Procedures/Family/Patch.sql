@@ -1,5 +1,5 @@
 -- Uncomment to update family PROCEDURES.
-\i ProFamilySelect.sql
-\i ProFamilyInsert.sql
-\i ProFamilyUpdate.sql
-\i ProFamilyExistsByCode.sql
+-- \ir ProFamilySelect.sql
+-- \ir ProFamilyInsert.sql
+-- \ir ProFamilyUpdate.sql
+-- \ir ProFamilyExistsByCode.sql

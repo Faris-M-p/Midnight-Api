@@ -1,2 +1,2 @@
--- \i ViewDashboard.sql
--- \i ViewMembers.sql
+-- \ir ViewDashboard.sql
+-- \ir ViewMembers.sql

@@ -1,1 +1,1 @@
--- \i MemberAudit.sql
+-- \ir MemberAudit.sql

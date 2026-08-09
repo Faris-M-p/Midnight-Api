@@ -232,9 +232,16 @@ public sealed class DataAccessDapper : IDataAccessDapper
 
     private static NpgsqlParameter CreateInputParameter(string name, object? value)
     {
-        if (value is string text && LooksLikeJson(text))
+        if (value is string text)
         {
-            return new NpgsqlParameter(name, NpgsqlDbType.Jsonb) { Value = text };
+            // Npgsql defaults strings to `text`. Postgres CALL matching is strict,
+            // so VARCHAR args (e.g. ProAccountLogin.p_Username) will not bind.
+            if (LooksLikeJson(text))
+            {
+                return new NpgsqlParameter(name, NpgsqlDbType.Jsonb) { Value = text };
+            }
+
+            return new NpgsqlParameter(name, NpgsqlDbType.Varchar) { Value = text };
         }
 
         return new NpgsqlParameter(name, value ?? DBNull.Value);

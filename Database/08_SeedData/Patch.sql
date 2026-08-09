@@ -1,2 +1,2 @@
--- \i DefaultSettings.sql
--- \i DefaultPermissions.sql
+-- \ir DefaultSettings.sql
+-- \ir DefaultPermissions.sql
