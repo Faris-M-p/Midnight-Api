@@ -1,3 +1,5 @@
+DROP PROCEDURE IF EXISTS "ProMemberInsert";
+
 CREATE OR REPLACE PROCEDURE "ProMemberInsert"(
     "p_FK_Families" BIGINT,
     "p_FK_Members_Parent" BIGINT,
@@ -13,6 +15,9 @@ CREATE OR REPLACE PROCEDURE "ProMemberInsert"(
     "p_Nickname" VARCHAR,
     "p_Biography" VARCHAR,
     "p_Profession" VARCHAR,
+    "p_LocationName" VARCHAR,
+    "p_Latitude" DOUBLE PRECISION,
+    "p_Longitude" DOUBLE PRECISION,
     "p_Addresses" JSONB,
     "p_Images" JSONB,
     "p_Events" JSONB,
@@ -48,12 +53,13 @@ BEGIN
     INSERT INTO "Members" (
         "FK_Families", "FK_Members_Parent", "FirstName", "LastName", "Email", "Phone",
         "Gender", "DateOfBirth", "DateOfDeath", "IsRoot", "Nickname", "Biography",
-        "Profession", "CreatedBy", "CreatedOn"
+        "Profession", "LocationName", "Latitude", "Longitude", "CreatedBy", "CreatedOn"
     )
     VALUES (
         "p_FK_Families", "p_FK_Members_Parent", TRIM("p_FirstName"), TRIM("p_LastName"), "p_Email", "p_Phone",
         "p_Gender", "p_DateOfBirth", "p_DateOfDeath", COALESCE("p_IsRoot", FALSE),
         NULLIF(TRIM(COALESCE("p_Nickname", '')), ''), "p_Biography", "p_Profession",
+        NULLIF(TRIM(COALESCE("p_LocationName", '')), ''), "p_Latitude", "p_Longitude",
         "p_CreatedBy", NOW()
     )
     RETURNING "Members"."ID_Members" INTO v_id;

@@ -22,7 +22,9 @@
 \ir 06_Triggers/Patch.sql
 
 \echo '=== Patch 07_Procedures ==='
-\ir 07_Procedures/DropLegacyFunctions.sql
+-- DropLegacyFunctions drops ALL Pro* procedures. Leave commented unless every
+-- procedure patch is uncommented in the same run.
+-- \ir 07_Procedures/DropLegacyFunctions.sql
 \ir 07_Procedures/Account/Patch.sql
 \ir 07_Procedures/Family/Patch.sql
 \ir 07_Procedures/Member/Patch.sql

@@ -142,6 +142,9 @@ public class MemberController : ControllerBase
             Nickname = request.Nickname,
             Biography = request.Biography,
             Profession = request.Profession,
+            LocationName = request.LocationName,
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
             Addresses = _commonService.ToJson(request.Addresses),
             Images = _commonService.ToJson(images.Count == 0 ? null : images),
             Events = _commonService.ToJson(request.Events),
@@ -164,11 +167,56 @@ public class MemberController : ControllerBase
     }
 
     [HttpPut("{id:long}")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(6 * 1024 * 1024)]
     public async Task<IActionResult> Update(
         [FromRoute] InputMemberRouteRequestView route,
-        [FromBody] InputUpdateMemberView request)
+        [FromForm] InputUpdateMemberView request,
+        CancellationToken cancellationToken)
     {
         _commonService.ValidateModelState(ModelState);
+
+        var images = request.Images;
+        if (request.ProfileImage is { Length: > 0 })
+        {
+            var url = await _images.SaveAsync(
+                new ImageUploadRequest
+                {
+                    File = request.ProfileImage,
+                    Mode = ImageUploadMode.MemberProfile,
+                    FamilyId = User.GetFamilyId()
+                },
+                Request,
+                cancellationToken);
+
+            images ??= (await _members.GetByIdAsync(new InputGetMember
+            {
+                FamilyId = User.GetFamilyId(),
+                MemberId = route.Id
+            }))?.Images
+                .Select(img => new InputUpdateMemberImageView
+                {
+                    Id = img.Id,
+                    ImageUrl = img.ImageUrl,
+                    Caption = img.Caption,
+                    IsPrimary = false,
+                    SortOrder = img.SortOrder
+                })
+                .ToList() ?? [];
+
+            foreach (var img in images)
+            {
+                img.IsPrimary = false;
+            }
+
+            images.Insert(0, new InputUpdateMemberImageView
+            {
+                ImageUrl = url,
+                Caption = "Profile",
+                IsPrimary = true,
+                SortOrder = 0
+            });
+        }
 
         var result = await _members.UpdateAsync(new InputUpdateMember
         {
@@ -187,8 +235,11 @@ public class MemberController : ControllerBase
             Nickname = request.Nickname,
             Biography = request.Biography,
             Profession = request.Profession,
+            LocationName = request.LocationName,
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
             Addresses = _commonService.ToJson(request.Addresses),
-            Images = _commonService.ToJson(request.Images),
+            Images = _commonService.ToJson(images),
             Events = _commonService.ToJson(request.Events),
             Notes = _commonService.ToJson(request.Notes),
             SocialLinks = _commonService.ToJson(request.SocialLinks),

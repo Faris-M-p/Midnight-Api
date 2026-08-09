@@ -1,3 +1,5 @@
+DROP PROCEDURE IF EXISTS "ProMemberUpdate";
+
 CREATE OR REPLACE PROCEDURE "ProMemberUpdate"(
     "p_FK_Families" BIGINT,
     "p_ID_Members" BIGINT,
@@ -14,6 +16,9 @@ CREATE OR REPLACE PROCEDURE "ProMemberUpdate"(
     "p_Nickname" VARCHAR,
     "p_Biography" VARCHAR,
     "p_Profession" VARCHAR,
+    "p_LocationName" VARCHAR,
+    "p_Latitude" DOUBLE PRECISION,
+    "p_Longitude" DOUBLE PRECISION,
     "p_Addresses" JSONB,
     "p_Images" JSONB,
     "p_Events" JSONB,
@@ -60,6 +65,9 @@ BEGIN
         "Nickname" = NULLIF(TRIM(COALESCE("p_Nickname", '')), ''),
         "Biography" = "p_Biography",
         "Profession" = "p_Profession",
+        "LocationName" = NULLIF(TRIM(COALESCE("p_LocationName", '')), ''),
+        "Latitude" = "p_Latitude",
+        "Longitude" = "p_Longitude",
         "UpdatedBy" = "p_UpdatedBy",
         "UpdatedOn" = NOW()
     WHERE "ID_Members" = "p_ID_Members";

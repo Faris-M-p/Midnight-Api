@@ -20,6 +20,9 @@ BEGIN
         'Nickname', m."Nickname",
         'Biography', m."Biography",
         'Profession', m."Profession",
+        'LocationName', m."LocationName",
+        'Latitude', m."Latitude",
+        'Longitude', m."Longitude",
         'Parent', (
             SELECT jsonb_build_object(
                 'Id', p."ID_Members",

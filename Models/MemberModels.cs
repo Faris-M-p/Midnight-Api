@@ -141,6 +141,18 @@ public abstract class InputMemberSaveBaseView
     [NoScriptTags]
     public string? Profession { get; set; }
 
+    [Display(Name = "Location")]
+    [StringLength(500)]
+    [TrimmedString]
+    [NoScriptTags]
+    public string? LocationName { get; set; }
+
+    [Range(-90, 90)]
+    public double? Latitude { get; set; }
+
+    [Range(-180, 180)]
+    public double? Longitude { get; set; }
+
     [Display(Name = "Parent Id")]
     [GreaterThanZero]
     public long? ParentId { get; set; }
@@ -279,6 +291,7 @@ public class InputCreateMemberView : InputMemberSaveBaseView
 
 public class InputUpdateMemberView : InputMemberSaveBaseView
 {
+    public IFormFile? ProfileImage { get; set; }
     public List<InputUpdateMemberAddressView>? Addresses { get; set; }
     public List<InputUpdateMemberImageView>? Images { get; set; }
     public List<InputUpdateMemberEventView>? Events { get; set; }
@@ -382,6 +395,15 @@ public class InputCreateMember
     [DbParam("p_Profession")]
     public string? Profession { get; set; }
 
+    [DbParam("p_LocationName")]
+    public string? LocationName { get; set; }
+
+    [DbParam("p_Latitude")]
+    public double? Latitude { get; set; }
+
+    [DbParam("p_Longitude")]
+    public double? Longitude { get; set; }
+
     [DbParam("p_Addresses")]
     public string? Addresses { get; set; }
 
@@ -447,6 +469,15 @@ public class InputUpdateMember
 
     [DbParam("p_Profession")]
     public string? Profession { get; set; }
+
+    [DbParam("p_LocationName")]
+    public string? LocationName { get; set; }
+
+    [DbParam("p_Latitude")]
+    public double? Latitude { get; set; }
+
+    [DbParam("p_Longitude")]
+    public double? Longitude { get; set; }
 
     [DbParam("p_Addresses")]
     public string? Addresses { get; set; }
@@ -545,6 +576,9 @@ public class OutputGetMember
     public string? Nickname { get; set; }
     public string? Biography { get; set; }
     public string? Profession { get; set; }
+    public string? LocationName { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
     public MemberRelationSummary? Parent { get; set; }
     public MemberRelationSummary? Spouse { get; set; }
     public List<MemberRelationSummary> Children { get; set; } = [];
