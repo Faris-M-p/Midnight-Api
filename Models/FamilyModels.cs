@@ -17,6 +17,11 @@ public class InputUpdateFamilyView
     [StringLength(1000)]
     [NoScriptTags]
     public string? Description { get; set; }
+
+    [StringLength(2000)]
+    public string? PhotoUrl { get; set; }
+
+    public IFormFile? FamilyPhoto { get; set; }
 }
 
 // --- DB input models ---
@@ -53,6 +58,9 @@ public class InputUpdateFamily
     [DbParam("p_Description")]
     public string? Description { get; set; }
 
+    [DbParam("p_PhotoUrl")]
+    public string? PhotoUrl { get; set; }
+
     [DbParam("p_UpdatedBy")]
     public string UpdatedBy { get; set; } = string.Empty;
 }
@@ -62,9 +70,11 @@ public class InputUpdateFamily
 public class OutputGetFamily
 {
     public long ID_Families { get; set; }
+    public long Id => ID_Families;
     public string FamilyCode { get; set; } = string.Empty;
     public string FamilyName { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public string? PhotoUrl { get; set; }
 }
 
 public class OutputCreateFamily : CommonResponse<IdResponse>

@@ -11,3 +11,6 @@ CREATE TABLE IF NOT EXISTS "Families" (
     "CancelledBy"   VARCHAR(100) NULL,
     "CancelledOn"   TIMESTAMPTZ  NULL
 );
+
+ALTER TABLE "Families"
+    ADD COLUMN IF NOT EXISTS "PhotoUrl" VARCHAR(2000) NULL;

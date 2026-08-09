@@ -2,6 +2,7 @@ CREATE OR REPLACE PROCEDURE "ProFamilyUpdate"(
     "p_ID_Families" BIGINT,
     "p_FamilyName" VARCHAR,
     "p_Description" VARCHAR,
+    "p_PhotoUrl" VARCHAR,
     "p_UpdatedBy" VARCHAR,
     INOUT "p_ResponseCode" BIGINT DEFAULT 0,
     INOUT "p_Status" BOOLEAN DEFAULT FALSE,
@@ -27,6 +28,7 @@ BEGIN
     UPDATE "Families" f
     SET "FamilyName" = "p_FamilyName",
         "Description" = "p_Description",
+        "PhotoUrl" = "p_PhotoUrl",
         "UpdatedBy" = "p_UpdatedBy",
         "UpdatedOn" = NOW()
     WHERE f."ID_Families" = "p_ID_Families"

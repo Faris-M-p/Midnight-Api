@@ -17,15 +17,18 @@ public class FamilyController : ControllerBase
     private readonly IFamiliesRepository _families;
     private readonly IMembersRepository _members;
     private readonly CommonService _commonService;
+    private readonly IImageFileService _images;
 
     public FamilyController(
         IFamiliesRepository families,
         IMembersRepository members,
-        CommonService commonService)
+        CommonService commonService,
+        IImageFileService images)
     {
         _families = families;
         _members = members;
         _commonService = commonService;
+        _images = images;
     }
 
     [HttpGet]
@@ -47,15 +50,37 @@ public class FamilyController : ControllerBase
     }
 
     [HttpPut]
-    public async Task<IActionResult> Update([FromBody] InputUpdateFamilyView request)
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(6 * 1024 * 1024)]
+    public async Task<IActionResult> Update([FromForm] InputUpdateFamilyView request, CancellationToken cancellationToken)
     {
         _commonService.ValidateModelState(ModelState);
 
+        var familyId = User.GetFamilyId();
+        var photoUrl = request.PhotoUrl;
+        if (request.FamilyPhoto is { Length: > 0 })
+        {
+            photoUrl = await _images.SaveAsync(
+                new ImageUploadRequest
+                {
+                    File = request.FamilyPhoto,
+                    Mode = ImageUploadMode.FamilyLogo,
+                    FamilyId = familyId
+                },
+                Request,
+                cancellationToken);
+        }
+        else if (string.IsNullOrWhiteSpace(photoUrl))
+        {
+            photoUrl = (await _families.GetByIdAsync(new InputGetFamily { Id = familyId }))?.PhotoUrl;
+        }
+
         var result = await _families.UpdateAsync(new InputUpdateFamily
         {
-            Id = User.GetFamilyId(),
+            Id = familyId,
             FamilyName = request.FamilyName.Trim(),
             Description = request.Description,
+            PhotoUrl = photoUrl,
             UpdatedBy = User.GetUsername()
         });
 
