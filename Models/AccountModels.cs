@@ -23,12 +23,6 @@ public class InputRegisterAccountView
     [Required, MinLength(6), StringLength(100)]
     public string Password { get; set; } = string.Empty;
 
-    [Display(Name = "Family Code")]
-    [Required, StringLength(50)]
-    [TrimmedString]
-    [NoScriptTags]
-    public string FamilyCode { get; set; } = string.Empty;
-
     [Display(Name = "Family Name")]
     [Required, StringLength(200)]
     [TrimmedString]

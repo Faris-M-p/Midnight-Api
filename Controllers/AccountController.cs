@@ -39,7 +39,6 @@ public class AccountController : ControllerBase
         var username = request.Username.Trim();
         var result = await _accounts.RegisterAsync(new InputRegisterAccount
         {
-            FamilyCode = request.FamilyCode.Trim(),
             FamilyName = request.FamilyName.Trim(),
             Description = request.Description,
             Username = username,
