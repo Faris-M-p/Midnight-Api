@@ -16,13 +16,16 @@ public class MemberController : ControllerBase
 {
     private readonly IMembersRepository _members;
     private readonly CommonService _commonService;
+    private readonly IImageFileService _images;
 
     public MemberController(
         IMembersRepository members,
-        CommonService commonService)
+        CommonService commonService,
+        IImageFileService images)
     {
         _members = members;
         _commonService = commonService;
+        _images = images;
     }
 
     [HttpGet]
@@ -91,9 +94,37 @@ public class MemberController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] InputCreateMemberView request)
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(6 * 1024 * 1024)]
+    public async Task<IActionResult> Create([FromForm] InputCreateMemberView request, CancellationToken cancellationToken)
     {
         _commonService.ValidateModelState(ModelState);
+
+        var images = request.Images ?? [];
+        if (request.ProfileImage is { Length: > 0 })
+        {
+            var url = await _images.SaveAsync(
+                new ImageUploadRequest
+                {
+                    File = request.ProfileImage,
+                    Mode = ImageUploadMode.MemberProfile,
+                    FamilyId = User.GetFamilyId()
+                },
+                Request,
+                cancellationToken);
+
+            images =
+            [
+                new InputCreateMemberImageView
+                {
+                    ImageUrl = url,
+                    Caption = "Profile",
+                    IsPrimary = true,
+                    SortOrder = 0
+                },
+                ..images
+            ];
+        }
 
         var result = await _members.CreateAsync(new InputCreateMember
         {
@@ -112,7 +143,7 @@ public class MemberController : ControllerBase
             Biography = request.Biography,
             Profession = request.Profession,
             Addresses = _commonService.ToJson(request.Addresses),
-            Images = _commonService.ToJson(request.Images),
+            Images = _commonService.ToJson(images.Count == 0 ? null : images),
             Events = _commonService.ToJson(request.Events),
             Notes = _commonService.ToJson(request.Notes),
             SocialLinks = _commonService.ToJson(request.SocialLinks),

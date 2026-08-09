@@ -269,6 +269,7 @@ public class InputUpdateMemberSocialLinkView : InputCreateMemberSocialLinkView
 
 public class InputCreateMemberView : InputMemberSaveBaseView
 {
+    public IFormFile? ProfileImage { get; set; }
     public List<InputCreateMemberAddressView>? Addresses { get; set; }
     public List<InputCreateMemberImageView>? Images { get; set; }
     public List<InputCreateMemberEventView>? Events { get; set; }

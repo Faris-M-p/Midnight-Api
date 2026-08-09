@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using MidnightApi.Auth;
 using MidnightApi.DataAccess;
@@ -33,6 +34,11 @@ builder.Services.AddScoped<IUserAccountsRepository, UserAccountsRepository>();
 builder.Services.AddSingleton<CommonService>();
 builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddSingleton<JwtTokenService>();
+builder.Services.AddSingleton<IImageFileService, ImageFileService>();
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 6 * 1024 * 1024;
+});
 
 var app = builder.Build();
 
@@ -40,6 +46,7 @@ app.UseGlobalExceptionHandling();
 app.UseSwaggerDocumentation();
 app.UseCors("AllowAll");
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
