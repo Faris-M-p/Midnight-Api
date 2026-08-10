@@ -22,4 +22,11 @@ public static class StoredProcedures
     public const string MemberMapSpouse = "ProMemberMapSpouse";
     public const string MemberDashboard = "ProMemberDashboard";
     public const string MemberTimeline = "ProMemberTimeline";
+
+    public const string AccessTokenList = "ProAccessTokenList";
+    public const string AccessTokenSelect = "ProAccessTokenSelect";
+    public const string AccessTokenInsert = "ProAccessTokenInsert";
+    public const string AccessTokenUpdate = "ProAccessTokenUpdate";
+    public const string AccessTokenSetStatus = "ProAccessTokenSetStatus";
+    public const string AccessTokenDelete = "ProAccessTokenDelete";
 }

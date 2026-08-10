@@ -35,6 +35,7 @@ builder.Services.AddScoped<IDataAccessDapper, DataAccessDapper>();
 builder.Services.AddScoped<IFamiliesRepository, FamiliesRepository>();
 builder.Services.AddScoped<IMembersRepository, MembersRepository>();
 builder.Services.AddScoped<IUserAccountsRepository, UserAccountsRepository>();
+builder.Services.AddScoped<IAccessTokensRepository, AccessTokensRepository>();
 builder.Services.AddSingleton<CommonService>();
 builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddSingleton<JwtTokenService>();
