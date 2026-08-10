@@ -13,9 +13,51 @@ public static class AccessTokenSecretGenerator
     /// </summary>
     public static string GenerateRawToken(string? familyCode, int secretLength = 20)
     {
-        var prefix = SanitizeFamilyCode(familyCode);
+        var prefix = PrefixFromFamilyCode(familyCode);
         var secret = GenerateSecret(secretLength);
         return $"{prefix}_{secret}";
+    }
+
+    public static string PrefixFromFamilyCode(string? familyCode)
+    {
+        var cleaned = new string((familyCode ?? string.Empty)
+            .Where(char.IsLetterOrDigit)
+            .ToArray())
+            .ToUpperInvariant();
+
+        return string.IsNullOrWhiteSpace(cleaned) ? "FAMILY" : cleaned;
+    }
+
+    public static bool MatchesFamilyPrefix(string rawToken, string? familyCode)
+    {
+        var prefix = PrefixFromFamilyCode(familyCode);
+        return rawToken.StartsWith(prefix + "_", StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Parses {FamilyCodePrefix}_{SecureSecret}. Uses the first underscore as the separator
+    /// so secrets may themselves contain underscores if ever present.
+    /// </summary>
+    public static bool TryParse(string? rawToken, out string familyCodePrefix, out string secret)
+    {
+        familyCodePrefix = string.Empty;
+        secret = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(rawToken))
+        {
+            return false;
+        }
+
+        var value = rawToken.Trim();
+        var separator = value.IndexOf('_');
+        if (separator <= 0 || separator >= value.Length - 1)
+        {
+            return false;
+        }
+
+        familyCodePrefix = value[..separator];
+        secret = value[(separator + 1)..];
+        return familyCodePrefix.Length > 0 && secret.Length > 0;
     }
 
     public static string BuildPreview(string rawToken)
@@ -32,20 +74,10 @@ public static class AccessTokenSecretGenerator
             return safe;
         }
 
-        var prefix = parts[0];
+        var tokenPrefix = parts[0];
         var secret = parts[1];
-        var prefixPreview = prefix.Length <= 6 ? prefix : prefix[..6];
+        var prefixPreview = tokenPrefix.Length <= 6 ? tokenPrefix : tokenPrefix[..6];
         return $"{prefixPreview}…{secret[^4..]}";
-    }
-
-    private static string SanitizeFamilyCode(string? familyCode)
-    {
-        var cleaned = new string((familyCode ?? string.Empty)
-            .Where(char.IsLetterOrDigit)
-            .ToArray())
-            .ToUpperInvariant();
-
-        return string.IsNullOrWhiteSpace(cleaned) ? "FAMILY" : cleaned;
     }
 
     private static string GenerateSecret(int length)

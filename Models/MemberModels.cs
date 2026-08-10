@@ -537,6 +537,23 @@ public class InputMemberTimeline
     public long FamilyId { get; set; }
 }
 
+public class InputMemberScopeCheck
+{
+    [DbParam("p_FK_Families")]
+    public long FamilyId { get; set; }
+
+    [DbParam("p_RootMemberId")]
+    public long RootMemberId { get; set; }
+
+    [DbParam("p_CandidateMemberId")]
+    public long CandidateMemberId { get; set; }
+}
+
+public class OutputMemberScopeCheck
+{
+    public bool IsInBranch { get; set; }
+}
+
 // --- Output models ---
 
 public class OutputMemberListItem

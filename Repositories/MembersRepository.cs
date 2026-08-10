@@ -63,4 +63,11 @@ public class MembersRepository : IMembersRepository
     public Task<List<OutputTimelineItem>> GetTimelineAsync(InputMemberTimeline input) =>
         _dataAccessDapper.GetListByStoredProcedureAsync<OutputTimelineItem>(
             StoredProcedures.MemberTimeline, input);
+
+    public async Task<bool> IsInScopeBranchAsync(InputMemberScopeCheck input)
+    {
+        var row = await _dataAccessDapper.GetSingleOrDefaultByStoredProcedureAsync<OutputMemberScopeCheck>(
+            StoredProcedures.MemberIsInScopeBranch, input);
+        return row?.IsInBranch == true;
+    }
 }

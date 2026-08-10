@@ -18,17 +18,20 @@ public class FamilyController : ControllerBase
     private readonly IMembersRepository _members;
     private readonly CommonService _commonService;
     private readonly IImageFileService _images;
+    private readonly AccessAuthorizationService _authz;
 
     public FamilyController(
         IFamiliesRepository families,
         IMembersRepository members,
         CommonService commonService,
-        IImageFileService images)
+        IImageFileService images,
+        AccessAuthorizationService authz)
     {
         _families = families;
         _members = members;
         _commonService = commonService;
         _images = images;
+        _authz = authz;
     }
 
     [HttpGet]
@@ -55,6 +58,7 @@ public class FamilyController : ControllerBase
     public async Task<IActionResult> Update([FromForm] InputUpdateFamilyView request, CancellationToken cancellationToken)
     {
         _commonService.ValidateModelState(ModelState);
+        _authz.EnsureCanEditFamily(User);
 
         var familyId = User.GetFamilyId();
         var photoUrl = request.PhotoUrl;

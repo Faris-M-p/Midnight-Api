@@ -32,6 +32,19 @@ public class InputGetFamily
     public long Id { get; set; }
 }
 
+public class InputGetFamilyByCode
+{
+    [DbParam("p_FamilyCode")]
+    public string FamilyCode { get; set; } = string.Empty;
+}
+
+public class OutputFamilyByCode
+{
+    public long Id { get; set; }
+    public string FamilyCode { get; set; } = string.Empty;
+    public string FamilyName { get; set; } = string.Empty;
+}
+
 public class InputCreateFamily
 {
     [DbParam("p_FamilyCode")]

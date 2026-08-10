@@ -17,15 +17,18 @@ public class MemberController : ControllerBase
     private readonly IMembersRepository _members;
     private readonly CommonService _commonService;
     private readonly IImageFileService _images;
+    private readonly AccessAuthorizationService _authz;
 
     public MemberController(
         IMembersRepository members,
         CommonService commonService,
-        IImageFileService images)
+        IImageFileService images,
+        AccessAuthorizationService authz)
     {
         _members = members;
         _commonService = commonService;
         _images = images;
+        _authz = authz;
     }
 
     [HttpGet]
@@ -99,6 +102,7 @@ public class MemberController : ControllerBase
     public async Task<IActionResult> Create([FromForm] InputCreateMemberView request, CancellationToken cancellationToken)
     {
         _commonService.ValidateModelState(ModelState);
+        await _authz.EnsureCanCreateMemberAsync(User, request.ParentId);
 
         var images = request.Images ?? [];
         if (request.ProfileImage is { Length: > 0 })
@@ -175,6 +179,7 @@ public class MemberController : ControllerBase
         CancellationToken cancellationToken)
     {
         _commonService.ValidateModelState(ModelState);
+        await _authz.EnsureCanEditMemberAsync(User, route.Id);
 
         var images = request.Images;
         if (request.ProfileImage is { Length: > 0 })
@@ -263,6 +268,7 @@ public class MemberController : ControllerBase
     public async Task<IActionResult> Delete([FromRoute] InputMemberRouteRequestView request)
     {
         _commonService.ValidateModelState(ModelState);
+        await _authz.EnsureCanDeleteMemberAsync(User, request.Id);
 
         var result = await _members.SoftDeleteAsync(new InputDeleteMember
         {
@@ -278,6 +284,7 @@ public class MemberController : ControllerBase
     public async Task<IActionResult> MapSpouse([FromBody] InputMapSpouseView request)
     {
         _commonService.ValidateModelState(ModelState);
+        await _authz.EnsureCanMapSpouseAsync(User, request.MemberId, request.SpouseId);
 
         var result = await _members.MapSpouseAsync(new InputMapSpouse
         {

@@ -6,6 +6,7 @@ public static class StoredProcedures
     public const string FamilyInsert = "ProFamilyInsert";
     public const string FamilyUpdate = "ProFamilyUpdate";
     public const string FamilyExistsByCode = "ProFamilyExistsByCode";
+    public const string FamilySelectByCode = "ProFamilySelectByCode";
 
     public const string AccountSelect = "ProAccountSelect";
     public const string AccountLogin = "ProAccountLogin";
@@ -22,6 +23,7 @@ public static class StoredProcedures
     public const string MemberMapSpouse = "ProMemberMapSpouse";
     public const string MemberDashboard = "ProMemberDashboard";
     public const string MemberTimeline = "ProMemberTimeline";
+    public const string MemberIsInScopeBranch = "ProMemberIsInScopeBranch";
 
     public const string AccessTokenList = "ProAccessTokenList";
     public const string AccessTokenSelect = "ProAccessTokenSelect";
@@ -29,4 +31,6 @@ public static class StoredProcedures
     public const string AccessTokenUpdate = "ProAccessTokenUpdate";
     public const string AccessTokenSetStatus = "ProAccessTokenSetStatus";
     public const string AccessTokenDelete = "ProAccessTokenDelete";
+    public const string AccessTokenListForLogin = "ProAccessTokenListForLogin";
+    public const string AccessTokenRecordLogin = "ProAccessTokenRecordLogin";
 }

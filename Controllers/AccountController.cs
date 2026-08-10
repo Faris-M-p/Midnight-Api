@@ -90,6 +90,10 @@ public class AccountController : ControllerBase
     public async Task<IActionResult> GetMe()
     {
         _commonService.ValidateModelState(ModelState);
+        if (User.IsAccessTokenUser())
+        {
+            throw new ForbiddenException();
+        }
 
         var account = await _accounts.GetByIdAsync(new InputGetAccount { Id = User.GetAccountId() })
             ?? throw new NotFoundException("Account not found.");
@@ -109,6 +113,10 @@ public class AccountController : ControllerBase
     public async Task<IActionResult> UpdateMe([FromBody] InputUpdateAccountView request)
     {
         _commonService.ValidateModelState(ModelState);
+        if (User.IsAccessTokenUser())
+        {
+            throw new ForbiddenException();
+        }
 
         var result = await _accounts.UpdateAsync(new InputUpdateAccount
         {

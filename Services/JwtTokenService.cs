@@ -21,6 +21,7 @@ public class JwtTokenService
         var expiresAt = DateTime.UtcNow.AddMinutes(_settings.ExpiryMinutes);
         var claims = new List<Claim>
         {
+            new(AuthClaimTypes.AuthType, AuthTypes.Admin),
             new(AuthClaimTypes.AccountId, accountId.ToString()),
             new(AuthClaimTypes.FamilyId, familyId.ToString()),
             new(AuthClaimTypes.Permission, AuthPermissions.AdminFull),
@@ -30,6 +31,49 @@ public class JwtTokenService
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
+        return IssueToken(claims, expiresAt);
+    }
+
+    public (string Token, DateTime ExpiresAtUtc) CreateAccessTokenSession(
+        long familyId,
+        long accessTokenId,
+        string displayName,
+        string permission,
+        string scope,
+        long? scopeMemberId,
+        DateTimeOffset accessTokenExpiresOn)
+    {
+        var jwtExpiry = DateTime.UtcNow.AddMinutes(_settings.ExpiryMinutes);
+        var tokenExpiryUtc = accessTokenExpiresOn.UtcDateTime;
+        var expiresAt = jwtExpiry < tokenExpiryUtc ? jwtExpiry : tokenExpiryUtc;
+        if (expiresAt <= DateTime.UtcNow)
+        {
+            expiresAt = DateTime.UtcNow.AddMinutes(1);
+        }
+
+        var claims = new List<Claim>
+        {
+            new(AuthClaimTypes.AuthType, AuthTypes.AccessToken),
+            new(AuthClaimTypes.FamilyId, familyId.ToString()),
+            new(AuthClaimTypes.AccessTokenId, accessTokenId.ToString()),
+            new(AuthClaimTypes.Permission, permission),
+            new(AuthClaimTypes.Scope, scope),
+            new(ClaimTypes.NameIdentifier, $"token:{accessTokenId}"),
+            new(ClaimTypes.Name, displayName),
+            new(ClaimTypes.Role, AuthRoles.TokenUser),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+
+        if (scopeMemberId is > 0)
+        {
+            claims.Add(new Claim(AuthClaimTypes.ScopeMemberId, scopeMemberId.Value.ToString()));
+        }
+
+        return IssueToken(claims, expiresAt);
+    }
+
+    private (string Token, DateTime ExpiresAtUtc) IssueToken(IEnumerable<Claim> claims, DateTime expiresAt)
+    {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Key));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var token = new JwtSecurityToken(

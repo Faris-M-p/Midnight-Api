@@ -81,6 +81,14 @@ public class InputSetAccessTokenStatusView
     public string Status { get; set; } = string.Empty;
 }
 
+public class InputAccessTokenLoginView
+{
+    [Display(Name = "Access Token")]
+    [Required, StringLength(200)]
+    [TrimmedString]
+    public string AccessToken { get; set; } = string.Empty;
+}
+
 // --- DB input models ---
 
 public class InputAccessTokenList
@@ -226,4 +234,49 @@ public class OutputSetAccessTokenStatus : CommonResponse<IdResponse>
 
 public class OutputDeleteAccessToken : CommonResponse<IdResponse>
 {
+}
+
+public class OutputAccessTokenLoginCandidate
+{
+    public long Id { get; set; }
+    public string TokenName { get; set; } = string.Empty;
+    public string Permission { get; set; } = string.Empty;
+    public string Scope { get; set; } = string.Empty;
+    public long? MemberId { get; set; }
+    public string TokenHash { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public DateTimeOffset ExpiresOn { get; set; }
+}
+
+public class InputAccessTokenRecordLogin
+{
+    [DbParam("p_FK_Families")]
+    public long FamilyId { get; set; }
+
+    [DbParam("p_ID_AccessTokens")]
+    public long TokenId { get; set; }
+}
+
+public class OutputAccessTokenRecordLogin : CommonResponse<IdResponse>
+{
+}
+
+public class OutputAccessTokenLogin
+{
+    public string AccessToken { get; set; } = string.Empty;
+    public DateTime ExpiresAtUtc { get; set; }
+    public string TokenType { get; set; } = "Bearer";
+    public OutputAccessTokenLoginUser User { get; set; } = null!;
+}
+
+public class OutputAccessTokenLoginUser
+{
+    public string AuthType { get; set; } = "access_token";
+    public long FamilyId { get; set; }
+    public long TokenId { get; set; }
+    public string TokenName { get; set; } = string.Empty;
+    public string Permission { get; set; } = string.Empty;
+    public string Scope { get; set; } = string.Empty;
+    public long? ScopeMemberId { get; set; }
+    public bool IsAdmin { get; set; }
 }

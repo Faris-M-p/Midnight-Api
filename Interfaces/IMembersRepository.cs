@@ -13,4 +13,5 @@ public interface IMembersRepository
     Task<OutputMapSpouse> MapSpouseAsync(InputMapSpouse input);
     Task<OutputDashboard?> GetDashboardAsync(InputMemberDashboard input);
     Task<List<OutputTimelineItem>> GetTimelineAsync(InputMemberTimeline input);
+    Task<bool> IsInScopeBranchAsync(InputMemberScopeCheck input);
 }

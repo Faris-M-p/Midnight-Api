@@ -19,6 +19,10 @@ public class FamiliesRepository : IFamiliesRepository
         _dataAccessDapper.GetSingleOrDefaultByStoredProcedureAsync<OutputGetFamily>(
             StoredProcedures.FamilySelect, input);
 
+    public Task<OutputFamilyByCode?> GetByCodeAsync(InputGetFamilyByCode input) =>
+        _dataAccessDapper.GetSingleOrDefaultByStoredProcedureAsync<OutputFamilyByCode>(
+            StoredProcedures.FamilySelectByCode, input);
+
     public async Task<OutputCreateFamily> CreateAsync(InputCreateFamily input)
     {
         OutputCreateFamily result = new();

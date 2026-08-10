@@ -18,17 +18,123 @@ public class AccessTokenController : ControllerBase
     private readonly IFamiliesRepository _families;
     private readonly CommonService _commonService;
     private readonly PasswordService _passwordService;
+    private readonly JwtTokenService _jwt;
 
     public AccessTokenController(
         IAccessTokensRepository tokens,
         IFamiliesRepository families,
         CommonService commonService,
-        PasswordService passwordService)
+        PasswordService passwordService,
+        JwtTokenService jwt)
     {
         _tokens = tokens;
         _families = families;
         _commonService = commonService;
         _passwordService = passwordService;
+        _jwt = jwt;
+    }
+
+    [HttpPost("login")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Login([FromBody] InputAccessTokenLoginView request)
+    {
+        _commonService.ValidateModelState(ModelState);
+
+        const string invalidMessage = "Invalid family code or access token.";
+        var rawToken = request.AccessToken.Trim();
+
+        if (!AccessTokenSecretGenerator.TryParse(rawToken, out var familyCodePrefix, out _))
+        {
+            throw new UnauthorizedAccessException(invalidMessage);
+        }
+
+        var family = await _families.GetByCodeAsync(new InputGetFamilyByCode { FamilyCode = familyCodePrefix });
+        if (family is null
+            || !AccessTokenSecretGenerator.MatchesFamilyPrefix(rawToken, family.FamilyCode))
+        {
+            throw new UnauthorizedAccessException(invalidMessage);
+        }
+
+        var candidates = await _tokens.ListForLoginAsync(new InputAccessTokenList
+        {
+            FamilyId = family.Id
+        });
+
+        OutputAccessTokenLoginCandidate? matched = null;
+        foreach (var candidate in candidates)
+        {
+            if (_passwordService.Verify(rawToken, candidate.TokenHash))
+            {
+                matched = candidate;
+                break;
+            }
+        }
+
+        if (matched is null)
+        {
+            throw new UnauthorizedAccessException(invalidMessage);
+        }
+
+        if (!IsValidTokenConfiguration(matched))
+        {
+            throw new UnauthorizedAccessException(invalidMessage);
+        }
+
+        if (string.Equals(matched.Status, "Inactive", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UnauthorizedAccessException("This access token is inactive.");
+        }
+
+        if (matched.ExpiresOn <= DateTimeOffset.UtcNow
+            || string.Equals(matched.Status, "Expired", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UnauthorizedAccessException("This access token has expired.");
+        }
+
+        if (!string.Equals(matched.Status, "Active", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UnauthorizedAccessException(invalidMessage);
+        }
+
+        _ = await _tokens.RecordLoginAsync(new InputAccessTokenRecordLogin
+        {
+            FamilyId = family.Id,
+            TokenId = matched.Id
+        });
+
+        var (jwt, expiresAt) = _jwt.CreateAccessTokenSession(
+            family.Id,
+            matched.Id,
+            matched.TokenName,
+            matched.Permission,
+            matched.Scope,
+            matched.MemberId,
+            matched.ExpiresOn);
+
+        return Ok(new ApiResponse<OutputAccessTokenLogin>
+        {
+            Success = true,
+            StatusCode = StatusCodes.Status200OK,
+            Message = "Login successful.",
+            Data = new OutputAccessTokenLogin
+            {
+                AccessToken = jwt,
+                ExpiresAtUtc = expiresAt,
+                TokenType = "Bearer",
+                User = new OutputAccessTokenLoginUser
+                {
+                    AuthType = AuthTypes.AccessToken,
+                    FamilyId = family.Id,
+                    TokenId = matched.Id,
+                    TokenName = matched.TokenName,
+                    Permission = matched.Permission,
+                    Scope = matched.Scope,
+                    ScopeMemberId = matched.MemberId,
+                    IsAdmin = false
+                }
+            },
+            TraceId = HttpContext.TraceIdentifier
+        });
     }
 
     [HttpGet]
@@ -241,6 +347,26 @@ public class AccessTokenController : ControllerBase
 
     private static bool NeedsMember(string scope) =>
         scope is "SelectedMember" or "MemberDescendants";
+
+    private static bool IsValidTokenConfiguration(OutputAccessTokenLoginCandidate token)
+    {
+        if (token.Permission is not ("View" or "Edit"))
+        {
+            return false;
+        }
+
+        if (token.Scope is not ("EntireFamily" or "SelectedMember" or "MemberDescendants"))
+        {
+            return false;
+        }
+
+        if (NeedsMember(token.Scope) && token.MemberId is null or <= 0)
+        {
+            return false;
+        }
+
+        return true;
+    }
 
     private static void ValidateScopeMember(string scope, long? memberId)
     {

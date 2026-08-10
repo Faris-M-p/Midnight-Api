@@ -35,3 +35,11 @@ public class ConflictException : AppException
     {
     }
 }
+
+public class ForbiddenException : AppException
+{
+    public ForbiddenException(string message = "You don't have permission to perform this action.", string? developerMessage = null)
+        : base(message, StatusCodes.Status403Forbidden, developerMessage)
+    {
+    }
+}

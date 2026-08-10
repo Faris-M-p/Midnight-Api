@@ -37,4 +37,12 @@ public class AccessTokensRepository : IAccessTokensRepository
     public Task<OutputDeleteAccessToken> SoftDeleteAsync(InputDeleteAccessToken input) =>
         _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputDeleteAccessToken>(
             StoredProcedures.AccessTokenDelete, input);
+
+    public Task<List<OutputAccessTokenLoginCandidate>> ListForLoginAsync(InputAccessTokenList input) =>
+        _dataAccessDapper.GetListByStoredProcedureAsync<OutputAccessTokenLoginCandidate>(
+            StoredProcedures.AccessTokenListForLogin, input);
+
+    public Task<OutputAccessTokenRecordLogin> RecordLoginAsync(InputAccessTokenRecordLogin input) =>
+        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputAccessTokenRecordLogin>(
+            StoredProcedures.AccessTokenRecordLogin, input);
 }

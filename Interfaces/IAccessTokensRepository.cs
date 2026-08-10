@@ -10,4 +10,6 @@ public interface IAccessTokensRepository
     Task<OutputUpdateAccessToken> UpdateAsync(InputUpdateAccessToken input);
     Task<OutputSetAccessTokenStatus> SetStatusAsync(InputSetAccessTokenStatus input);
     Task<OutputDeleteAccessToken> SoftDeleteAsync(InputDeleteAccessToken input);
+    Task<List<OutputAccessTokenLoginCandidate>> ListForLoginAsync(InputAccessTokenList input);
+    Task<OutputAccessTokenRecordLogin> RecordLoginAsync(InputAccessTokenRecordLogin input);
 }
