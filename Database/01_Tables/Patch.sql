@@ -7,3 +7,4 @@
 -- \ir MemberNotes.sql
 -- \ir MemberSocialLinks.sql
 -- \ir UserAccounts.sql
+\ir AccessTokens.sql
