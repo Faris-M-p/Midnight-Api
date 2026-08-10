@@ -5,6 +5,7 @@ using MidnightApi.DataAccess;
 using MidnightApi.Filters;
 using MidnightApi.Interfaces;
 using MidnightApi.Middleware;
+using MidnightApi.Options;
 using MidnightApi.Repositories;
 using MidnightApi.Services;
 using MidnightApi.Swagger;
@@ -19,6 +20,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.SuppressModelStateInvalidFilter = true;
 });
+builder.Services.Configure<DatabaseTraceOptions>(builder.Configuration.GetSection(DatabaseTraceOptions.SectionName));
 builder.Services.AddSwaggerDocumentation();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddCors(options =>
@@ -27,6 +29,8 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 });
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<DatabaseTraceWriter>();
 builder.Services.AddScoped<IDataAccessDapper, DataAccessDapper>();
 builder.Services.AddScoped<IFamiliesRepository, FamiliesRepository>();
 builder.Services.AddScoped<IMembersRepository, MembersRepository>();
@@ -41,6 +45,9 @@ builder.Services.Configure<FormOptions>(options =>
 });
 
 var app = builder.Build();
+
+// Force construction so a fresh DatabaseTrace.log is created when Enabled=true.
+_ = app.Services.GetRequiredService<DatabaseTraceWriter>();
 
 app.UseGlobalExceptionHandling();
 app.UseSwaggerDocumentation();

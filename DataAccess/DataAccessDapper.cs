@@ -1,4 +1,5 @@
 using System.Data;
+using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
 using Dapper;
@@ -24,12 +25,20 @@ public sealed class DataAccessDapper : IDataAccessDapper
 
     private readonly string _connectionString;
     private readonly ILogger<DataAccessDapper> _logger;
+    private readonly DatabaseTraceWriter _trace;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public DataAccessDapper(IConfiguration configuration, ILogger<DataAccessDapper> logger)
+    public DataAccessDapper(
+        IConfiguration configuration,
+        ILogger<DataAccessDapper> logger,
+        DatabaseTraceWriter trace,
+        IHttpContextAccessor httpContextAccessor)
     {
         _connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("DefaultConnection is missing in appsettings.");
         _logger = logger;
+        _trace = trace;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<List<TResult>> GetListByStoredProcedureAsync<TResult>(string storedProcedureName, object? parameter = null)
@@ -82,6 +91,10 @@ public sealed class DataAccessDapper : IDataAccessDapper
 
     private async Task<TResult> CallWriteAsync<TResult>(string storedProcedureName, object? parameter)
     {
+        var extras = CallModeExtra.ForWrite();
+        var entry = _trace.TryBegin(storedProcedureName, parameter, extras, fetchCursorName: null, _httpContextAccessor.HttpContext);
+        var sw = Stopwatch.StartNew();
+
         try
         {
             await using var connection = new NpgsqlConnection(_connectionString);
@@ -91,10 +104,12 @@ public sealed class DataAccessDapper : IDataAccessDapper
 
             var result = Activator.CreateInstance<TResult>()!;
             ApplyWriteResult(result, cmd);
+            _trace.TryComplete(entry, sw, success: true);
             return result;
         }
         catch (Exception ex)
         {
+            _trace.TryComplete(entry, sw, success: false, ex);
             _logger.LogError(ex, "Stored procedure command failed.");
             throw;
         }
@@ -102,16 +117,23 @@ public sealed class DataAccessDapper : IDataAccessDapper
 
     private async Task<object?> CallJsonDataAsync(string storedProcedureName, object? parameter)
     {
+        var extras = CallModeExtra.ForJsonData();
+        var entry = _trace.TryBegin(storedProcedureName, parameter, extras, fetchCursorName: null, _httpContextAccessor.HttpContext);
+        var sw = Stopwatch.StartNew();
+
         try
         {
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
             await using var cmd = CreateCallCommand(connection, storedProcedureName, parameter, CallMode.JsonData);
             await cmd.ExecuteNonQueryAsync();
-            return GetParameterValue(cmd, DataParam);
+            var payload = GetParameterValue(cmd, DataParam);
+            _trace.TryComplete(entry, sw, success: true);
+            return payload;
         }
         catch (Exception ex)
         {
+            _trace.TryComplete(entry, sw, success: false, ex);
             _logger.LogError(ex, "Stored procedure command failed.");
             throw;
         }
@@ -123,6 +145,11 @@ public sealed class DataAccessDapper : IDataAccessDapper
         bool includeTotalCount)
     {
         var cursorName = "c" + Guid.NewGuid().ToString("N");
+        var extras = includeTotalCount
+            ? CallModeExtra.ForPagedCursor(cursorName)
+            : CallModeExtra.ForCursor(cursorName);
+        var entry = _trace.TryBegin(storedProcedureName, parameter, extras, fetchCursorName: cursorName, _httpContextAccessor.HttpContext);
+        var sw = Stopwatch.StartNew();
 
         try
         {
@@ -149,10 +176,12 @@ public sealed class DataAccessDapper : IDataAccessDapper
                 : items.Count;
 
             await transaction.CommitAsync();
+            _trace.TryComplete(entry, sw, success: true);
             return (items, totalCount);
         }
         catch (Exception ex)
         {
+            _trace.TryComplete(entry, sw, success: false, ex);
             _logger.LogError(ex, "Stored procedure command failed.");
             throw;
         }
