@@ -5,6 +5,7 @@ public static class StoredProcedures
     public const string FamilySelect = "ProFamilySelect";
     public const string FamilyInsert = "ProFamilyInsert";
     public const string FamilyUpdate = "ProFamilyUpdate";
+    public const string FamilyUpdateCover = "ProFamilyUpdateCover";
     public const string FamilyExistsByCode = "ProFamilyExistsByCode";
     public const string FamilySelectByCode = "ProFamilySelectByCode";
 

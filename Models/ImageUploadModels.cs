@@ -6,7 +6,8 @@ public enum ImageUploadMode
     FamilyLogo = 2,
     Gallery = 3,
     Story = 4,
-    Event = 5
+    Event = 5,
+    FamilyCover = 6
 }
 
 public class ImageUploadRequest

@@ -2,4 +2,7 @@
 -- \ir ProFamilySelect.sql
 -- \ir ProFamilyInsert.sql
 -- \ir ProFamilyUpdate.sql
+-- \ir ProFamilyUpdateCover.sql
 -- \ir ProFamilyExistsByCode.sql
+-- \ir ProFamilySelect.sql
+-- \ir ProFamilyUpdateCover.sql

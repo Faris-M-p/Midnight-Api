@@ -49,6 +49,10 @@ public class FamiliesRepository : IFamiliesRepository
         _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputUpdateFamily>(
             StoredProcedures.FamilyUpdate, input);
 
+    public Task<OutputUpdateFamily> UpdateCoverAsync(InputUpdateFamilyCover input) =>
+        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputUpdateFamily>(
+            StoredProcedures.FamilyUpdateCover, input);
+
     private static bool IsFamilyCodeConflict(string? message) =>
         !string.IsNullOrWhiteSpace(message)
         && message.Contains("Family code already exists", StringComparison.OrdinalIgnoreCase);

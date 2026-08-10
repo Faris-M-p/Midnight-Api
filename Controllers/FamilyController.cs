@@ -91,6 +91,42 @@ public class FamilyController : ControllerBase
         return _commonService.ToActionResult(result, HttpContext.TraceIdentifier);
     }
 
+    [HttpPut("cover")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(6 * 1024 * 1024)]
+    public async Task<IActionResult> UpdateCover(
+        [FromForm] InputUpdateFamilyCoverView request,
+        CancellationToken cancellationToken)
+    {
+        _commonService.ValidateModelState(ModelState);
+        _authz.EnsureCanEditFamily(User);
+
+        if (request.FamilyCover is not { Length: > 0 })
+        {
+            throw new BadRequestException("Please choose a cover image.");
+        }
+
+        var familyId = User.GetFamilyId();
+        var coverUrl = await _images.SaveAsync(
+            new ImageUploadRequest
+            {
+                File = request.FamilyCover,
+                Mode = ImageUploadMode.FamilyCover,
+                FamilyId = familyId
+            },
+            Request,
+            cancellationToken);
+
+        var result = await _families.UpdateCoverAsync(new InputUpdateFamilyCover
+        {
+            Id = familyId,
+            CoverUrl = coverUrl,
+            UpdatedBy = User.GetUsername()
+        });
+
+        return _commonService.ToActionResult(result, HttpContext.TraceIdentifier);
+    }
+
     [HttpGet("dashboard")]
     public async Task<IActionResult> GetDashboard()
     {

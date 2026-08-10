@@ -24,6 +24,12 @@ public class InputUpdateFamilyView
     public IFormFile? FamilyPhoto { get; set; }
 }
 
+public class InputUpdateFamilyCoverView
+{
+    [Required(ErrorMessage = "Please choose a cover image.")]
+    public IFormFile? FamilyCover { get; set; }
+}
+
 // --- DB input models ---
 
 public class InputGetFamily
@@ -78,6 +84,18 @@ public class InputUpdateFamily
     public string UpdatedBy { get; set; } = string.Empty;
 }
 
+public class InputUpdateFamilyCover
+{
+    [DbParam("p_ID_Families")]
+    public long Id { get; set; }
+
+    [DbParam("p_CoverUrl")]
+    public string CoverUrl { get; set; } = string.Empty;
+
+    [DbParam("p_UpdatedBy")]
+    public string UpdatedBy { get; set; } = string.Empty;
+}
+
 // --- DB / API output models ---
 
 public class OutputGetFamily
@@ -88,6 +106,7 @@ public class OutputGetFamily
     public string FamilyName { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? PhotoUrl { get; set; }
+    public string? CoverUrl { get; set; }
 }
 
 public class OutputCreateFamily : CommonResponse<IdResponse>

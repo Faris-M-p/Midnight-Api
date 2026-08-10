@@ -8,4 +8,5 @@ public interface IFamiliesRepository
     Task<OutputFamilyByCode?> GetByCodeAsync(InputGetFamilyByCode input);
     Task<OutputCreateFamily> CreateAsync(InputCreateFamily input);
     Task<OutputUpdateFamily> UpdateAsync(InputUpdateFamily input);
+    Task<OutputUpdateFamily> UpdateCoverAsync(InputUpdateFamilyCover input);
 }

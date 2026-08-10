@@ -76,6 +76,7 @@ public class ImageFileService : IImageFileService
                 ? ["members", familyId]
                 : ["members", familyId, entityId],
             ImageUploadMode.FamilyLogo => ["family", familyId, "logo"],
+            ImageUploadMode.FamilyCover => ["family", familyId, "cover"],
             ImageUploadMode.Gallery => entityId is null
                 ? ["gallery", familyId]
                 : ["gallery", familyId, entityId],
