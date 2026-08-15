@@ -2,9 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MidnightApi.Auth;
 using MidnightApi.Exceptions;
-using MidnightApi.Interfaces;
 using MidnightApi.Models;
-using MidnightApi.Services;
+using MidnightApi.Repositories.Interfaces;
+using MidnightApi.Services.Interfaces;
 
 namespace MidnightApi.Controllers;
 
@@ -16,22 +16,25 @@ public class AccessTokenController : ControllerBase
 {
     private readonly IAccessTokensRepository _tokens;
     private readonly IFamiliesRepository _families;
-    private readonly CommonService _commonService;
-    private readonly PasswordService _passwordService;
-    private readonly JwtTokenService _jwt;
+    private readonly ICommonService _commonService;
+    private readonly IPasswordService _passwordService;
+    private readonly IJwtTokenService _jwt;
+    private readonly IAccessTokenSecretGenerator _secrets;
 
     public AccessTokenController(
         IAccessTokensRepository tokens,
         IFamiliesRepository families,
-        CommonService commonService,
-        PasswordService passwordService,
-        JwtTokenService jwt)
+        ICommonService commonService,
+        IPasswordService passwordService,
+        IJwtTokenService jwt,
+        IAccessTokenSecretGenerator secrets)
     {
         _tokens = tokens;
         _families = families;
         _commonService = commonService;
         _passwordService = passwordService;
         _jwt = jwt;
+        _secrets = secrets;
     }
 
     [HttpPost("login")]
@@ -43,14 +46,14 @@ public class AccessTokenController : ControllerBase
         const string invalidMessage = "Invalid family code or access token.";
         var rawToken = request.AccessToken.Trim();
 
-        if (!AccessTokenSecretGenerator.TryParse(rawToken, out var familyCodePrefix, out _))
+        if (!_secrets.TryParse(rawToken, out var familyCodePrefix, out _))
         {
             throw new UnauthorizedAccessException(invalidMessage);
         }
 
         var family = await _families.GetByCodeAsync(new InputGetFamilyByCode { FamilyCode = familyCodePrefix });
         if (family is null
-            || !AccessTokenSecretGenerator.MatchesFamilyPrefix(rawToken, family.FamilyCode))
+            || !_secrets.MatchesFamilyPrefix(rawToken, family.FamilyCode))
         {
             throw new UnauthorizedAccessException(invalidMessage);
         }
@@ -182,15 +185,15 @@ public class AccessTokenController : ControllerBase
         var family = await _families.GetByIdAsync(new InputGetFamily { Id = familyId })
             ?? throw new NotFoundException("Family not found.");
 
-        var expiresOn = AccessTokenExpiryHelper.ResolveExpiresOn(request.ExpiryPreset, request.CustomExpiresOn);
+        var expiresOn = _secrets.ResolveExpiresOn(request.ExpiryPreset, request.CustomExpiresOn);
         if (expiresOn <= DateTimeOffset.UtcNow)
         {
             throw new BadRequestException("Expiry must be in the future.");
         }
 
-        var rawToken = AccessTokenSecretGenerator.GenerateRawToken(family.FamilyCode);
+        var rawToken = _secrets.GenerateRawToken(family.FamilyCode);
         var tokenHash = _passwordService.Hash(rawToken);
-        var tokenPreview = AccessTokenSecretGenerator.BuildPreview(rawToken);
+        var tokenPreview = _secrets.BuildPreview(rawToken);
 
         var result = await _tokens.CreateAsync(new InputCreateAccessToken
         {
@@ -234,7 +237,7 @@ public class AccessTokenController : ControllerBase
 
         _ = await LoadTokenOrThrow(route.Id);
 
-        var expiresOn = AccessTokenExpiryHelper.ResolveExpiresOn(request.ExpiryPreset, request.CustomExpiresOn);
+        var expiresOn = _secrets.ResolveExpiresOn(request.ExpiryPreset, request.CustomExpiresOn);
         if (expiresOn <= DateTimeOffset.UtcNow)
         {
             throw new BadRequestException("Expiry must be in the future.");

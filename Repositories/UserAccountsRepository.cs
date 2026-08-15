@@ -1,18 +1,20 @@
 using MidnightApi.Data;
-using MidnightApi.DataAccess;
-using MidnightApi.Interfaces;
+using MidnightApi.DataAccess.Interfaces;
 using MidnightApi.Models;
-using MidnightApi.Services;
+using MidnightApi.Repositories.Interfaces;
+using MidnightApi.Services.Interfaces;
 
 namespace MidnightApi.Repositories;
 
 public class UserAccountsRepository : IUserAccountsRepository
 {
     public readonly IDataAccessDapper _dataAccessDapper;
+    private readonly IFamilyCodeGenerator _familyCodes;
 
-    public UserAccountsRepository(IDataAccessDapper dataAccessDapper)
+    public UserAccountsRepository(IDataAccessDapper dataAccessDapper, IFamilyCodeGenerator familyCodes)
     {
         _dataAccessDapper = dataAccessDapper;
+        _familyCodes = familyCodes;
     }
 
     public Task<OutputGetAccount?> GetByIdAsync(InputGetAccount input) =>
@@ -23,6 +25,10 @@ public class UserAccountsRepository : IUserAccountsRepository
         _dataAccessDapper.GetSingleOrDefaultByStoredProcedureAsync<OutputLoginAccount>(
             StoredProcedures.AccountLogin, input);
 
+    public Task<OutputLoginAccount?> GetByEmailAsync(InputGetAccountByEmail input) =>
+        _dataAccessDapper.GetSingleOrDefaultByStoredProcedureAsync<OutputLoginAccount>(
+            StoredProcedures.AccountSelectByEmail, input);
+
     public async Task<OutputRegister> RegisterAsync(InputRegisterAccount input)
     {
         OutputRegister result = new();
@@ -30,7 +36,7 @@ public class UserAccountsRepository : IUserAccountsRepository
         {
             if (string.IsNullOrWhiteSpace(input.FamilyCode) || attempt > 0)
             {
-                input.FamilyCode = FamilyCodeGenerator.Generate(input.FamilyName);
+                input.FamilyCode = _familyCodes.Generate(input.FamilyName);
             }
 
             result = await _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputRegister>(
@@ -48,6 +54,14 @@ public class UserAccountsRepository : IUserAccountsRepository
     public Task<OutputUpdateAccount> UpdateAsync(InputUpdateAccount input) =>
         _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputUpdateAccount>(
             StoredProcedures.AccountUpdate, input);
+
+    public Task<OutputUpdateAccount> SetEmailVerifiedAsync(InputSetEmailVerified input) =>
+        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputUpdateAccount>(
+            StoredProcedures.AccountSetEmailVerified, input);
+
+    public Task<OutputUpdateAccount> UpdatePasswordAsync(InputUpdateAccountPassword input) =>
+        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputUpdateAccount>(
+            StoredProcedures.AccountUpdatePassword, input);
 
     private static bool IsFamilyCodeConflict(string? message) =>
         !string.IsNullOrWhiteSpace(message)

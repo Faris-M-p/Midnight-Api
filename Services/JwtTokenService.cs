@@ -4,10 +4,11 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MidnightApi.Auth;
+using MidnightApi.Services.Interfaces;
 
 namespace MidnightApi.Services;
 
-public class JwtTokenService
+public class JwtTokenService : IJwtTokenService
 {
     private readonly JwtSettings _settings;
 

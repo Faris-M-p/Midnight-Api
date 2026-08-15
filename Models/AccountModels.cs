@@ -121,6 +121,36 @@ public class InputUpdateAccount
 
 // --- Output models ---
 
+public class InputGetAccountByEmail
+{
+    [DbParam("p_Email")]
+    public string Email { get; set; } = string.Empty;
+}
+
+public class InputSetEmailVerified
+{
+    [DbParam("p_ID_UserAccounts")]
+    public long Id { get; set; }
+
+    [DbParam("p_EmailVerified")]
+    public bool EmailVerified { get; set; }
+
+    [DbParam("p_UpdatedBy")]
+    public string UpdatedBy { get; set; } = string.Empty;
+}
+
+public class InputUpdateAccountPassword
+{
+    [DbParam("p_ID_UserAccounts")]
+    public long Id { get; set; }
+
+    [DbParam("p_PasswordHash")]
+    public string PasswordHash { get; set; } = string.Empty;
+
+    [DbParam("p_UpdatedBy")]
+    public string UpdatedBy { get; set; } = string.Empty;
+}
+
 public class OutputGetAccount
 {
     public long ID_UserAccounts { get; set; }
@@ -128,6 +158,7 @@ public class OutputGetAccount
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public bool IsActive { get; set; }
+    public bool EmailVerified { get; set; }
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string PasswordHash { get; set; } = string.Empty;
@@ -140,6 +171,7 @@ public class OutputLoginAccount
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public bool IsActive { get; set; }
+    public bool EmailVerified { get; set; }
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string PasswordHash { get; set; } = string.Empty;
@@ -158,4 +190,115 @@ public class OutputLogin
     public string AccessToken { get; set; } = string.Empty;
     public DateTime ExpiresAtUtc { get; set; }
     public string TokenType { get; set; } = "Bearer";
+    public bool RequiresEmailVerification { get; set; }
+    public bool RequiresLoginOtp { get; set; }
+    public string? Username { get; set; }
+    public string? Email { get; set; }
+    public string? MaskedEmail { get; set; }
+    public int ResendAvailableInSeconds { get; set; }
+}
+
+public class OutputRegisterAccount
+{
+    public long AccountId { get; set; }
+    public long? FamilyId { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string MaskedEmail { get; set; } = string.Empty;
+    public bool RequiresEmailVerification { get; set; } = true;
+    public int ResendAvailableInSeconds { get; set; }
+}
+
+public class InputVerifyEmailView
+{
+    [Display(Name = "Email")]
+    [Required, EmailAddress, StringLength(256)]
+    [TrimmedString]
+    public string Email { get; set; } = string.Empty;
+
+    [Display(Name = "Verification code")]
+    [Required, StringLength(10, MinimumLength = 4)]
+    [TrimmedString]
+    public string Otp { get; set; } = string.Empty;
+}
+
+public class InputVerifyLoginOtpView
+{
+    [Display(Name = "Email")]
+    [Required, EmailAddress, StringLength(256)]
+    [TrimmedString]
+    public string Email { get; set; } = string.Empty;
+
+    [Display(Name = "Verification code")]
+    [Required, StringLength(10, MinimumLength = 4)]
+    [TrimmedString]
+    public string Otp { get; set; } = string.Empty;
+}
+
+public class InputResendLoginOtpView
+{
+    [Display(Name = "Email")]
+    [Required, EmailAddress, StringLength(256)]
+    [TrimmedString]
+    public string Email { get; set; } = string.Empty;
+}
+
+public class InputResendVerificationView
+{
+    [Display(Name = "Email")]
+    [Required, EmailAddress, StringLength(256)]
+    [TrimmedString]
+    public string Email { get; set; } = string.Empty;
+}
+
+public class InputForgotPasswordView
+{
+    [Display(Name = "Email")]
+    [Required, EmailAddress, StringLength(256)]
+    [TrimmedString]
+    public string Email { get; set; } = string.Empty;
+}
+
+public class InputVerifyForgotPasswordOtpView
+{
+    [Display(Name = "Email")]
+    [Required, EmailAddress, StringLength(256)]
+    [TrimmedString]
+    public string Email { get; set; } = string.Empty;
+
+    [Display(Name = "Verification code")]
+    [Required, StringLength(10, MinimumLength = 4)]
+    [TrimmedString]
+    public string Otp { get; set; } = string.Empty;
+}
+
+public class InputResetPasswordView
+{
+    [Display(Name = "Email")]
+    [Required, EmailAddress, StringLength(256)]
+    [TrimmedString]
+    public string Email { get; set; } = string.Empty;
+
+    [Required, StringLength(200)]
+    public string ResetToken { get; set; } = string.Empty;
+
+    [Display(Name = "Password")]
+    [Required, MinLength(8), StringLength(100)]
+    public string NewPassword { get; set; } = string.Empty;
+
+    [Display(Name = "Confirm Password")]
+    [Required, MinLength(8), StringLength(100)]
+    public string ConfirmPassword { get; set; } = string.Empty;
+}
+
+public class OutputForgotPasswordRequest
+{
+    public string Message { get; set; } =
+        "If an account exists for this email, a verification code has been sent.";
+}
+
+public class OutputForgotPasswordOtpVerified
+{
+    public string Email { get; set; } = string.Empty;
+    public string MaskedEmail { get; set; } = string.Empty;
+    public string ResetToken { get; set; } = string.Empty;
 }

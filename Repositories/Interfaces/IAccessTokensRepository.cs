@@ -1,6 +1,6 @@
 using MidnightApi.Models;
 
-namespace MidnightApi.Interfaces;
+namespace MidnightApi.Repositories.Interfaces;
 
 public interface IAccessTokensRepository
 {

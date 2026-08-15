@@ -32,6 +32,19 @@ BEGIN
 
     IF EXISTS (
         SELECT 1
+        FROM "UserAccounts" a
+        WHERE LOWER(a."Email") = LOWER("p_Email")
+          AND a."IsCancelled" = FALSE
+    ) THEN
+        "p_ResponseCode" := 20;
+        "p_Status" := FALSE;
+        "p_ResponseMessage" := 'Email already exists.';
+        "p_Data" := NULL;
+        RETURN;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
         FROM "Families" f
         WHERE f."FamilyCode" = "p_FamilyCode"
           AND f."IsCancelled" = FALSE
@@ -48,17 +61,17 @@ BEGIN
     RETURNING "ID_Families" INTO v_family_id;
 
     INSERT INTO "UserAccounts" (
-        "FK_Families", "Username", "Email", "PasswordHash", "IsActive", "CreatedBy", "CreatedOn"
+        "FK_Families", "Username", "Email", "PasswordHash", "IsActive", "EmailVerified", "CreatedBy", "CreatedOn"
     )
     VALUES (
-        v_family_id, "p_Username", "p_Email", "p_PasswordHash", TRUE, "p_CreatedBy", NOW()
+        v_family_id, "p_Username", "p_Email", "p_PasswordHash", TRUE, FALSE, "p_CreatedBy", NOW()
     )
     RETURNING "ID_UserAccounts" INTO v_account_id;
 
     "p_ResponseCode" := v_account_id;
     "p_Status" := TRUE;
     "p_ResponseMessage" := 'Account registered successfully.';
-    "p_Data" := jsonb_build_object('Id', v_account_id);
+    "p_Data" := jsonb_build_object('Id', v_account_id, 'FamilyId', v_family_id, 'Email', "p_Email");
 EXCEPTION WHEN OTHERS THEN
     "p_ResponseCode" := -1;
     "p_Status" := FALSE;

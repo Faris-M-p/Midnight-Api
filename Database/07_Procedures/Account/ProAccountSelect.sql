@@ -11,7 +11,8 @@ BEGIN
         a."FK_Families",
         a."Username",
         a."Email",
-        a."IsActive"
+        a."IsActive",
+        a."EmailVerified"
     FROM "UserAccounts" a
     WHERE a."ID_UserAccounts" = "p_ID_UserAccounts"
       AND a."IsCancelled" = FALSE;

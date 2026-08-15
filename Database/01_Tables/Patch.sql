@@ -6,5 +6,6 @@
 -- \ir MemberEvents.sql
 -- \ir MemberNotes.sql
 -- \ir MemberSocialLinks.sql
--- \ir UserAccounts.sql
+\ir UserAccounts.sql
+\ir AccountOtps.sql
 -- \ir AccessTokens.sql

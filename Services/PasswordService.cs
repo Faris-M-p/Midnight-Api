@@ -3,7 +3,9 @@ using System.Text;
 
 namespace MidnightApi.Services;
 
-public class PasswordService
+using MidnightApi.Services.Interfaces;
+
+public class PasswordService : IPasswordService
 {
     public string Hash(string password)
     {

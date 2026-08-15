@@ -1,10 +1,12 @@
 namespace MidnightApi.Services;
 
-public static class FamilyCodeGenerator
+using MidnightApi.Services.Interfaces;
+
+public class FamilyCodeGenerator : IFamilyCodeGenerator
 {
     private static readonly char[] Alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
 
-    public static string Generate(string? familyName)
+    public string Generate(string? familyName)
     {
         return $"{DerivePrefix(familyName)}-{RandomSuffix(4)}";
     }

@@ -20,6 +20,7 @@
   <ItemGroup>
     <Content Include="Database\**\*.sql" CopyToOutputDirectory="PreserveNewest" LinkBase="Database" />
     <Content Include="Database\**\*.bat" CopyToOutputDirectory="PreserveNewest" LinkBase="Database" />
+    <Content Include="Templates\**\*.html" CopyToOutputDirectory="PreserveNewest" LinkBase="Templates" />
   </ItemGroup>
 
 </Project>

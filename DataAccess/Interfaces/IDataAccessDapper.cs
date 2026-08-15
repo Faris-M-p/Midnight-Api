@@ -1,4 +1,4 @@
-namespace MidnightApi.DataAccess;
+namespace MidnightApi.DataAccess.Interfaces;
 
 public interface IDataAccessDapper
 {

@@ -1,6 +1,6 @@
-namespace MidnightApi.Interfaces;
-
 using MidnightApi.Models;
+
+namespace MidnightApi.Repositories.Interfaces;
 
 public interface IFamiliesRepository
 {

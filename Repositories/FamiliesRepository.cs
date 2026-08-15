@@ -1,18 +1,20 @@
 using MidnightApi.Data;
-using MidnightApi.DataAccess;
-using MidnightApi.Interfaces;
+using MidnightApi.DataAccess.Interfaces;
 using MidnightApi.Models;
-using MidnightApi.Services;
+using MidnightApi.Repositories.Interfaces;
+using MidnightApi.Services.Interfaces;
 
 namespace MidnightApi.Repositories;
 
 public class FamiliesRepository : IFamiliesRepository
 {
     public readonly IDataAccessDapper _dataAccessDapper;
+    private readonly IFamilyCodeGenerator _familyCodes;
 
-    public FamiliesRepository(IDataAccessDapper dataAccessDapper)
+    public FamiliesRepository(IDataAccessDapper dataAccessDapper, IFamilyCodeGenerator familyCodes)
     {
         _dataAccessDapper = dataAccessDapper;
+        _familyCodes = familyCodes;
     }
 
     public Task<OutputGetFamily?> GetByIdAsync(InputGetFamily input) =>
@@ -30,7 +32,7 @@ public class FamiliesRepository : IFamiliesRepository
         {
             if (string.IsNullOrWhiteSpace(input.FamilyCode) || attempt > 0)
             {
-                input.FamilyCode = FamilyCodeGenerator.Generate(input.FamilyName);
+                input.FamilyCode = _familyCodes.Generate(input.FamilyName);
             }
 
             result = await _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputCreateFamily>(

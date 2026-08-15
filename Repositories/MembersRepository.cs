@@ -1,7 +1,7 @@
 using MidnightApi.Data;
-using MidnightApi.DataAccess;
-using MidnightApi.Interfaces;
+using MidnightApi.DataAccess.Interfaces;
 using MidnightApi.Models;
+using MidnightApi.Repositories.Interfaces;
 
 namespace MidnightApi.Repositories;
 

@@ -15,3 +15,7 @@ CREATE TABLE IF NOT EXISTS "UserAccounts" (
     CONSTRAINT "FK_UserAccounts_Families"
         FOREIGN KEY ("FK_Families") REFERENCES "Families" ("ID_Families") ON DELETE RESTRICT
 );
+
+-- Existing rows receive TRUE; new registrations insert FALSE explicitly.
+ALTER TABLE "UserAccounts"
+    ADD COLUMN IF NOT EXISTS "EmailVerified" BOOLEAN NOT NULL DEFAULT TRUE;

@@ -3,11 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using MidnightApi.Exceptions;
 using MidnightApi.Models;
+using MidnightApi.Services.Interfaces;
 using MidnightApi.Validation.CustomModelValidation;
 
 namespace MidnightApi.Services;
 
-public class CommonService
+public class CommonService : ICommonService
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

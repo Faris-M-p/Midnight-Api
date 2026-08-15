@@ -1,8 +1,9 @@
 using System.Security.Claims;
 using MidnightApi.Auth;
 using MidnightApi.Exceptions;
-using MidnightApi.Interfaces;
 using MidnightApi.Models;
+using MidnightApi.Repositories.Interfaces;
+using MidnightApi.Services.Interfaces;
 
 namespace MidnightApi.Services;
 
@@ -10,7 +11,7 @@ namespace MidnightApi.Services;
 /// Enforces edit authorization for access-token sessions.
 /// Read access is always family-wide for valid tokens; scope applies only to writes.
 /// </summary>
-public class AccessAuthorizationService
+public class AccessAuthorizationService : IAccessAuthorizationService
 {
     private readonly IMembersRepository _members;
 

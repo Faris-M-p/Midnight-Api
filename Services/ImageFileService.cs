@@ -1,6 +1,6 @@
 using MidnightApi.Exceptions;
-using MidnightApi.Interfaces;
 using MidnightApi.Models;
+using MidnightApi.Services.Interfaces;
 
 namespace MidnightApi.Services;
 

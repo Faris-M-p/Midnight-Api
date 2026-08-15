@@ -2,9 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MidnightApi.Auth;
 using MidnightApi.Exceptions;
-using MidnightApi.Interfaces;
 using MidnightApi.Models;
-using MidnightApi.Services;
+using MidnightApi.Repositories.Interfaces;
+using MidnightApi.Services.Interfaces;
 
 namespace MidnightApi.Controllers;
 
@@ -16,16 +16,16 @@ public class FamilyController : ControllerBase
 {
     private readonly IFamiliesRepository _families;
     private readonly IMembersRepository _members;
-    private readonly CommonService _commonService;
+    private readonly ICommonService _commonService;
     private readonly IImageFileService _images;
-    private readonly AccessAuthorizationService _authz;
+    private readonly IAccessAuthorizationService _authz;
 
     public FamilyController(
         IFamiliesRepository families,
         IMembersRepository members,
-        CommonService commonService,
+        ICommonService commonService,
         IImageFileService images,
-        AccessAuthorizationService authz)
+        IAccessAuthorizationService authz)
     {
         _families = families;
         _members = members;
