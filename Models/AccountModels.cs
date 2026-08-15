@@ -8,12 +8,6 @@ namespace MidnightApi.Models;
 
 public class InputRegisterAccountView
 {
-    [Display(Name = "Username")]
-    [Required, MinLength(3), StringLength(100)]
-    [TrimmedString]
-    [NoScriptTags]
-    public string Username { get; set; } = string.Empty;
-
     [Display(Name = "Email")]
     [Required, EmailAddress, StringLength(256)]
     [TrimmedString]
@@ -28,18 +22,14 @@ public class InputRegisterAccountView
     [TrimmedString]
     [NoScriptTags]
     public string FamilyName { get; set; } = string.Empty;
-
-    [StringLength(1000)]
-    [NoScriptTags]
-    public string? Description { get; set; }
 }
 
 public class InputLoginView
 {
-    [Display(Name = "Username")]
-    [Required, MinLength(3), StringLength(100)]
+    [Display(Name = "Email")]
+    [Required, EmailAddress, StringLength(256)]
     [TrimmedString]
-    public string Username { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
 
     [Display(Name = "Password")]
     [Required, MinLength(6), StringLength(100)]
@@ -191,7 +181,6 @@ public class OutputLogin
     public DateTime ExpiresAtUtc { get; set; }
     public string TokenType { get; set; } = "Bearer";
     public bool RequiresEmailVerification { get; set; }
-    public bool RequiresLoginOtp { get; set; }
     public string? Username { get; set; }
     public string? Email { get; set; }
     public string? MaskedEmail { get; set; }
@@ -219,27 +208,6 @@ public class InputVerifyEmailView
     [Required, StringLength(10, MinimumLength = 4)]
     [TrimmedString]
     public string Otp { get; set; } = string.Empty;
-}
-
-public class InputVerifyLoginOtpView
-{
-    [Display(Name = "Email")]
-    [Required, EmailAddress, StringLength(256)]
-    [TrimmedString]
-    public string Email { get; set; } = string.Empty;
-
-    [Display(Name = "Verification code")]
-    [Required, StringLength(10, MinimumLength = 4)]
-    [TrimmedString]
-    public string Otp { get; set; } = string.Empty;
-}
-
-public class InputResendLoginOtpView
-{
-    [Display(Name = "Email")]
-    [Required, EmailAddress, StringLength(256)]
-    [TrimmedString]
-    public string Email { get; set; } = string.Empty;
 }
 
 public class InputResendVerificationView

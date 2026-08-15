@@ -6,17 +6,12 @@ public interface IAccountOtpService
 {
     string MaskEmail(string email);
 
-    Task<OutputOtpChallenge> IssueRegistrationOtpAsync(
+    Task<OutputOtpChallenge> IssueEmailVerificationOtpAsync(
         long accountId,
         string email,
         CancellationToken cancellationToken = default);
 
     Task<OutputOtpChallenge> IssueForgotPasswordOtpAsync(
-        long accountId,
-        string email,
-        CancellationToken cancellationToken = default);
-
-    Task<OutputOtpChallenge> IssueLoginOtpAsync(
         long accountId,
         string email,
         CancellationToken cancellationToken = default);
@@ -27,9 +22,7 @@ public interface IAccountOtpService
         string purpose,
         CancellationToken cancellationToken = default);
 
-    Task VerifyRegistrationOtpAsync(string email, string otp);
-
-    Task VerifyLoginOtpAsync(string email, string otp);
+    Task<OutputLoginAccount> VerifyEmailVerificationOtpAsync(string email, string otp);
 
     Task<string> VerifyForgotPasswordOtpAsync(string email, string otp);
 

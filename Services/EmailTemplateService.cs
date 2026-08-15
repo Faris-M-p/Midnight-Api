@@ -24,16 +24,11 @@ public class EmailTemplateService : IEmailTemplateService
 
     public string ForgotPasswordSubject => "Reset your Midnight Chronicle password";
 
-    public string LoginSubject => "Your Midnight Chronicle sign-in code";
-
     public string BuildRegistrationVerificationHtml(string otp, int expiryMinutes) =>
         Render("RegistrationVerification.html", otp, expiryMinutes);
 
     public string BuildForgotPasswordHtml(string otp, int expiryMinutes) =>
         Render("ForgotPassword.html", otp, expiryMinutes);
-
-    public string BuildLoginVerificationHtml(string otp, int expiryMinutes) =>
-        Render("LoginVerification.html", otp, expiryMinutes);
 
     private string Render(string fileName, string otp, int expiryMinutes)
     {

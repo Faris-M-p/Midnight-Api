@@ -15,6 +15,7 @@ namespace MidnightApi.Controllers;
 public class AccountController : ControllerBase
 {
     private readonly IUserAccountsRepository _accounts;
+    private readonly IFamiliesRepository _families;
     private readonly IPasswordService _passwords;
     private readonly IJwtTokenService _jwt;
     private readonly ICommonService _commonService;
@@ -22,12 +23,14 @@ public class AccountController : ControllerBase
 
     public AccountController(
         IUserAccountsRepository accounts,
+        IFamiliesRepository families,
         IPasswordService passwords,
         IJwtTokenService jwt,
         ICommonService commonService,
         IAccountOtpService otpService)
     {
         _accounts = accounts;
+        _families = families;
         _passwords = passwords;
         _jwt = jwt;
         _commonService = commonService;
@@ -42,37 +45,82 @@ public class AccountController : ControllerBase
     {
         _commonService.ValidateModelState(ModelState);
 
-        var username = request.Username.Trim();
         var email = request.Email.Trim();
-        var result = await _accounts.RegisterAsync(new InputRegisterAccount
+        var familyName = request.FamilyName.Trim();
+        var passwordHash = _passwords.Hash(request.Password);
+        var username = ResolveUsernameFromEmail(email);
+
+        var existing = await _accounts.GetByEmailAsync(new InputGetAccountByEmail { Email = email });
+        long accountId;
+        long? familyId;
+
+        if (existing is not null)
         {
-            FamilyName = request.FamilyName.Trim(),
-            Description = request.Description,
-            Username = username,
-            Email = email,
-            PasswordHash = _passwords.Hash(request.Password),
-            CreatedBy = username
-        });
+            if (existing.EmailVerified)
+            {
+                throw new ConflictException("An account already exists with this email. Please sign in.");
+            }
 
-        _commonService.EnsureSuccess(result);
+            // Abandoned / unverified registration: reuse the same account (never duplicate email).
+            var refresh = await _accounts.UpdateAsync(new InputUpdateAccount
+            {
+                Id = existing.ID_UserAccounts,
+                Username = existing.Username,
+                Email = email,
+                PasswordHash = passwordHash,
+                UpdatedBy = existing.Username
+            });
+            _commonService.EnsureSuccess(refresh);
 
-        var account = await _accounts.GetByIdAsync(new InputGetAccount { Id = result.ResponseCode })
-            ?? throw new BadRequestException("Account was created but could not be loaded.");
+            var family = await _families.GetByIdAsync(new InputGetFamily { Id = existing.FK_Families });
+            if (family is not null)
+            {
+                var familyUpdate = await _families.UpdateAsync(new InputUpdateFamily
+                {
+                    Id = family.ID_Families,
+                    FamilyName = familyName,
+                    Description = family.Description,
+                    PhotoUrl = family.PhotoUrl,
+                    UpdatedBy = existing.Username
+                });
+                _commonService.EnsureSuccess(familyUpdate);
+            }
 
-        var challenge = await _otpService.IssueRegistrationOtpAsync(
-            account.ID_UserAccounts,
-            account.Email,
-            cancellationToken);
+            accountId = existing.ID_UserAccounts;
+            familyId = existing.FK_Families;
+        }
+        else
+        {
+            var result = await _accounts.RegisterAsync(new InputRegisterAccount
+            {
+                FamilyName = familyName,
+                Description = null,
+                Username = username,
+                Email = email,
+                PasswordHash = passwordHash,
+                CreatedBy = username
+            });
+
+            _commonService.EnsureSuccess(result);
+
+            var account = await _accounts.GetByIdAsync(new InputGetAccount { Id = result.ResponseCode })
+                ?? throw new BadRequestException("Account was created but could not be loaded.");
+
+            accountId = account.ID_UserAccounts;
+            familyId = account.FK_Families;
+        }
+
+        var challenge = await _otpService.IssueEmailVerificationOtpAsync(accountId, email, cancellationToken);
 
         return Ok(new ApiResponse<OutputRegisterAccount>
         {
             Success = true,
             StatusCode = StatusCodes.Status201Created,
-            Message = "Account created. Please verify your email.",
+            Message = "We've sent a verification code to your email.",
             Data = new OutputRegisterAccount
             {
-                AccountId = account.ID_UserAccounts,
-                FamilyId = account.FK_Families,
+                AccountId = accountId,
+                FamilyId = familyId,
                 Email = challenge.Email,
                 MaskedEmail = challenge.MaskedEmail,
                 RequiresEmailVerification = true,
@@ -87,14 +135,29 @@ public class AccountController : ControllerBase
     public async Task<IActionResult> VerifyEmail([FromBody] InputVerifyEmailView request)
     {
         _commonService.ValidateModelState(ModelState);
-        await _otpService.VerifyRegistrationOtpAsync(request.Email, request.Otp);
 
-        return Ok(new ApiResponse<object?>
+        // OTP → EmailVerified=true (committed) → only then issue JWT.
+        var account = await _otpService.VerifyEmailVerificationOtpAsync(request.Email, request.Otp);
+
+        var (token, expiresAt) = _jwt.CreateAdminToken(
+            account.ID_UserAccounts,
+            account.FK_Families,
+            account.Username);
+
+        return Ok(new ApiResponse<OutputLogin>
         {
             Success = true,
             StatusCode = StatusCodes.Status200OK,
-            Message = "Email verified successfully. You can sign in now.",
-            Data = null,
+            Message = "Email verified successfully.",
+            Data = new OutputLogin
+            {
+                AccessToken = token,
+                ExpiresAtUtc = expiresAt,
+                RequiresEmailVerification = false,
+                Username = account.Username,
+                Email = account.Email,
+                MaskedEmail = _otpService.MaskEmail(account.Email)
+            },
             TraceId = HttpContext.TraceIdentifier
         });
     }
@@ -123,13 +186,12 @@ public class AccountController : ControllerBase
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Email is already verified.",
+                Message = "We've sent a verification code to your email.",
                 Data = new OutputOtpChallenge
                 {
                     Email = account.Email,
                     MaskedEmail = _otpService.MaskEmail(account.Email),
-                    ResendAvailableInSeconds = 0,
-                    ExpiresInSeconds = 0
+                    ResendAvailableInSeconds = 0
                 },
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -138,14 +200,14 @@ public class AccountController : ControllerBase
         var challenge = await _otpService.ResendAsync(
             account.ID_UserAccounts,
             account.Email,
-            OtpPurposes.Registration,
+            OtpPurposes.EmailVerification,
             cancellationToken);
 
         return Ok(new ApiResponse<OutputOtpChallenge>
         {
             Success = true,
             StatusCode = StatusCodes.Status200OK,
-            Message = "Verification code sent.",
+            Message = "We've sent a verification code to your email.",
             Data = challenge,
             TraceId = HttpContext.TraceIdentifier
         });
@@ -159,40 +221,38 @@ public class AccountController : ControllerBase
     {
         _commonService.ValidateModelState(ModelState);
 
-        var account = await _accounts.GetLoginByUsernameAsync(new InputLoginAccount
+        var account = await _accounts.GetByEmailAsync(new InputGetAccountByEmail
         {
-            Username = request.Username.Trim()
+            Email = request.Email.Trim()
         });
 
         if (account is null || !_passwords.Verify(request.Password, account.PasswordHash))
         {
-            throw new UnauthorizedAccessException("Invalid username or password.");
+            throw new UnauthorizedAccessException("Invalid email or password.");
         }
 
         if (!account.EmailVerified)
         {
             try
             {
-                await _otpService.ResendAsync(
+                await _otpService.IssueEmailVerificationOtpAsync(
                     account.ID_UserAccounts,
                     account.Email,
-                    OtpPurposes.Registration,
                     cancellationToken);
             }
             catch (BadRequestException)
             {
-                // Cooldown or send failure — still route user to verification screen.
+                // Still route to verification screen without exposing account state.
             }
 
             return Ok(new ApiResponse<OutputLogin>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Email verification required.",
+                Message = "We've sent a verification code to your email.",
                 Data = new OutputLogin
                 {
                     RequiresEmailVerification = true,
-                    RequiresLoginOtp = false,
                     Username = account.Username,
                     Email = account.Email,
                     MaskedEmail = _otpService.MaskEmail(account.Email)
@@ -200,49 +260,6 @@ public class AccountController : ControllerBase
                 TraceId = HttpContext.TraceIdentifier
             });
         }
-
-        OutputOtpChallenge? challenge = null;
-        try
-        {
-            challenge = await _otpService.IssueLoginOtpAsync(
-                account.ID_UserAccounts,
-                account.Email,
-                cancellationToken);
-        }
-        catch (BadRequestException)
-        {
-            // Still route to OTP screen if send/cooldown fails after credentials succeed.
-        }
-
-        return Ok(new ApiResponse<OutputLogin>
-        {
-            Success = true,
-            StatusCode = StatusCodes.Status200OK,
-            Message = "Enter the verification code sent to your email.",
-            Data = new OutputLogin
-            {
-                RequiresEmailVerification = false,
-                RequiresLoginOtp = true,
-                Username = account.Username,
-                Email = account.Email,
-                MaskedEmail = challenge?.MaskedEmail ?? _otpService.MaskEmail(account.Email),
-                ResendAvailableInSeconds = challenge?.ResendAvailableInSeconds ?? 0
-            },
-            TraceId = HttpContext.TraceIdentifier
-        });
-    }
-
-    [HttpPost("login/verify-otp")]
-    [AllowAnonymous]
-    public async Task<IActionResult> VerifyLoginOtp([FromBody] InputVerifyLoginOtpView request)
-    {
-        _commonService.ValidateModelState(ModelState);
-        await _otpService.VerifyLoginOtpAsync(request.Email, request.Otp);
-
-        var account = await _accounts.GetByEmailAsync(new InputGetAccountByEmail
-        {
-            Email = request.Email.Trim()
-        }) ?? throw new BadRequestException("Invalid verification code.");
 
         var (token, expiresAt) = _jwt.CreateAdminToken(
             account.ID_UserAccounts,
@@ -259,45 +276,10 @@ public class AccountController : ControllerBase
                 AccessToken = token,
                 ExpiresAtUtc = expiresAt,
                 RequiresEmailVerification = false,
-                RequiresLoginOtp = false,
                 Username = account.Username,
                 Email = account.Email,
                 MaskedEmail = _otpService.MaskEmail(account.Email)
             },
-            TraceId = HttpContext.TraceIdentifier
-        });
-    }
-
-    [HttpPost("login/resend-otp")]
-    [AllowAnonymous]
-    public async Task<IActionResult> ResendLoginOtp(
-        [FromBody] InputResendLoginOtpView request,
-        CancellationToken cancellationToken)
-    {
-        _commonService.ValidateModelState(ModelState);
-
-        var account = await _accounts.GetByEmailAsync(new InputGetAccountByEmail
-        {
-            Email = request.Email.Trim()
-        });
-
-        if (account is null || !account.EmailVerified || !account.IsActive)
-        {
-            throw new BadRequestException("Unable to send verification email. Please try again.");
-        }
-
-        var challenge = await _otpService.ResendAsync(
-            account.ID_UserAccounts,
-            account.Email,
-            OtpPurposes.Login,
-            cancellationToken);
-
-        return Ok(new ApiResponse<OutputOtpChallenge>
-        {
-            Success = true,
-            StatusCode = StatusCodes.Status200OK,
-            Message = "Verification code sent.",
-            Data = challenge,
             TraceId = HttpContext.TraceIdentifier
         });
     }
@@ -315,7 +297,7 @@ public class AccountController : ControllerBase
             Email = request.Email.Trim()
         });
 
-        if (account is not null)
+        if (account is not null && account.EmailVerified && account.IsActive)
         {
             try
             {
@@ -441,4 +423,18 @@ public class AccountController : ControllerBase
         System.Text.RegularExpressions.Regex.IsMatch(
             password,
             @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$");
+
+    /// <summary>
+    /// Internal account handle derived from email (UI no longer collects username).
+    /// </summary>
+    private static string ResolveUsernameFromEmail(string email)
+    {
+        var normalized = email.Trim().ToLowerInvariant();
+        if (normalized.Length <= 100)
+        {
+            return normalized;
+        }
+
+        return normalized[..100];
+    }
 }

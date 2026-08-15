@@ -2,7 +2,7 @@
 \ir ProAccountSelect.sql
 \ir ProAccountLogin.sql
 \ir ProAccountRegister.sql
--- \ir ProAccountUpdate.sql
+\ir ProAccountUpdate.sql
 -- \ir ProAccountExistsByUsername.sql
 \ir ProAccountSelectByEmail.sql
 \ir ProAccountSetEmailVerified.sql

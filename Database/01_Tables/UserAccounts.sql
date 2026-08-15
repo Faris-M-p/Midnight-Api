@@ -19,3 +19,11 @@ CREATE TABLE IF NOT EXISTS "UserAccounts" (
 -- Existing rows receive TRUE; new registrations insert FALSE explicitly.
 ALTER TABLE "UserAccounts"
     ADD COLUMN IF NOT EXISTS "EmailVerified" BOOLEAN NOT NULL DEFAULT TRUE;
+
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_UserAccounts_Username_Active"
+    ON "UserAccounts" (LOWER("Username"))
+    WHERE "IsCancelled" = FALSE;
+
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_UserAccounts_Email_Active"
+    ON "UserAccounts" (LOWER("Email"))
+    WHERE "IsCancelled" = FALSE;

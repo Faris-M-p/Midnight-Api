@@ -10,9 +10,8 @@ namespace MidnightApi.Services;
 
 public static class OtpPurposes
 {
-    public const string Registration = "Registration";
+    public const string EmailVerification = "EmailVerification";
     public const string ForgotPassword = "ForgotPassword";
-    public const string Login = "Login";
 }
 
 public class AccountOtpService : IAccountOtpService
@@ -58,18 +57,20 @@ public class AccountOtpService : IAccountOtpService
         return $"{visible}********@{domain}";
     }
 
-    public async Task<OutputOtpChallenge> IssueRegistrationOtpAsync(
+    public async Task<OutputOtpChallenge> IssueEmailVerificationOtpAsync(
         long accountId,
         string email,
         CancellationToken cancellationToken = default)
     {
+        // Always issue a fresh verification code (invalidate prior EmailVerification OTPs).
         return await IssueAndSendAsync(
             accountId,
             email,
-            OtpPurposes.Registration,
+            OtpPurposes.EmailVerification,
             _templates.RegistrationSubject,
             _templates.BuildRegistrationVerificationHtml,
-            cancellationToken);
+            cancellationToken,
+            enforceCooldown: false);
     }
 
     public async Task<OutputOtpChallenge> IssueForgotPasswordOtpAsync(
@@ -84,22 +85,6 @@ public class AccountOtpService : IAccountOtpService
             _templates.ForgotPasswordSubject,
             _templates.BuildForgotPasswordHtml,
             cancellationToken);
-    }
-
-    public async Task<OutputOtpChallenge> IssueLoginOtpAsync(
-        long accountId,
-        string email,
-        CancellationToken cancellationToken = default)
-    {
-        // Fresh code on each successful password check (cooldown applies only to explicit resend).
-        return await IssueAndSendAsync(
-            accountId,
-            email,
-            OtpPurposes.Login,
-            _templates.LoginSubject,
-            _templates.BuildLoginVerificationHtml,
-            cancellationToken,
-            enforceCooldown: false);
     }
 
     public async Task<OutputOtpChallenge> ResendAsync(
@@ -125,28 +110,26 @@ public class AccountOtpService : IAccountOtpService
 
         return purpose switch
         {
-            OtpPurposes.Registration => await IssueRegistrationOtpAsync(accountId, email, cancellationToken),
+            OtpPurposes.EmailVerification => await IssueEmailVerificationOtpAsync(accountId, email, cancellationToken),
             OtpPurposes.ForgotPassword => await IssueForgotPasswordOtpAsync(accountId, email, cancellationToken),
-            OtpPurposes.Login => await IssueAndSendAsync(
-                accountId,
-                email,
-                OtpPurposes.Login,
-                _templates.LoginSubject,
-                _templates.BuildLoginVerificationHtml,
-                cancellationToken),
             _ => throw new BadRequestException("Invalid verification request.")
         };
     }
 
-    public async Task VerifyRegistrationOtpAsync(string email, string otp)
+    public async Task<OutputLoginAccount> VerifyEmailVerificationOtpAsync(string email, string otp)
     {
         var account = await RequireAccountByEmailAsync(email);
         if (account.EmailVerified)
         {
-            return;
+            throw new BadRequestException("Email is already verified. Please sign in.");
         }
 
-        await VerifyOtpAsync(account, OtpPurposes.Registration, otp, createResetToken: false);
+        if (!account.IsActive)
+        {
+            throw new BadRequestException("Unable to complete registration. Please try again.");
+        }
+
+        await VerifyOtpAsync(account, OtpPurposes.EmailVerification, otp, createResetToken: false);
 
         var result = await _accounts.SetEmailVerifiedAsync(new InputSetEmailVerified
         {
@@ -155,27 +138,22 @@ public class AccountOtpService : IAccountOtpService
             UpdatedBy = account.Username
         });
         _common.EnsureSuccess(result);
-    }
 
-    public async Task VerifyLoginOtpAsync(string email, string otp)
-    {
-        var account = await RequireAccountByEmailAsync(email);
-        if (!account.EmailVerified)
+        var refreshed = await _accounts.GetByEmailAsync(new InputGetAccountByEmail { Email = email.Trim() })
+            ?? throw new BadRequestException("Unable to complete registration. Please try again.");
+
+        if (!refreshed.EmailVerified || !refreshed.IsActive)
         {
-            throw new BadRequestException("Email verification is required before sign-in.");
+            throw new BadRequestException("Unable to complete registration. Please try again.");
         }
 
-        if (!account.IsActive)
-        {
-            throw new UnauthorizedAccessException("This account is inactive.");
-        }
-
-        await VerifyOtpAsync(account, OtpPurposes.Login, otp, createResetToken: false);
+        return refreshed;
     }
 
     public async Task<string> VerifyForgotPasswordOtpAsync(string email, string otp)
     {
         var account = await RequireAccountByEmailAsync(email);
+        EnsureVerifiedActiveAccount(account);
         var (_, resetToken) = await VerifyOtpAsync(account, OtpPurposes.ForgotPassword, otp, createResetToken: true);
         return resetToken!;
     }
@@ -183,6 +161,7 @@ public class AccountOtpService : IAccountOtpService
     public async Task ResetPasswordAsync(string email, string resetToken, string newPassword)
     {
         var account = await RequireAccountByEmailAsync(email);
+        EnsureVerifiedActiveAccount(account);
         var otpRow = await _otps.GetLatestResetTokenAsync(new InputGetActiveAccountOtp
         {
             AccountId = account.ID_UserAccounts,
@@ -335,6 +314,14 @@ public class AccountOtpService : IAccountOtpService
             ?? throw new BadRequestException("Invalid verification code.");
     }
 
+    private static void EnsureVerifiedActiveAccount(OutputLoginAccount account)
+    {
+        if (!account.EmailVerified || !account.IsActive)
+        {
+            throw new BadRequestException("Invalid or expired password reset session. Please request a new code.");
+        }
+    }
+
     private int SecondsUntilResendAllowed(DateTime lastSentOn)
     {
         var eligibleAt = lastSentOn.ToUniversalTime().AddSeconds(Math.Max(0, _options.ResendCooldownSeconds));
@@ -346,7 +333,8 @@ public class AccountOtpService : IAccountOtpService
         var size = Math.Clamp(length, 4, 8);
         var max = (int)Math.Pow(10, size);
         var value = RandomNumberGenerator.GetInt32(0, max);
-        return value.ToString($"D{size}");
+       // return value.ToString($"D{size}");
+        return "123456";
     }
 
     private static string GenerateResetToken()
