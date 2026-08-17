@@ -24,6 +24,7 @@ public class MemberImageItem
     public string? Caption { get; set; }
     public bool IsPrimary { get; set; }
     public int SortOrder { get; set; }
+    public long FileSize { get; set; }
 }
 
 public class MemberEventItem
@@ -207,6 +208,10 @@ public class InputCreateMemberImageView
 
     public bool IsPrimary { get; set; }
     public int SortOrder { get; set; }
+
+    /// <summary>Actual stored file size in bytes (set by the API after upload).</summary>
+    [Range(0, long.MaxValue)]
+    public long FileSize { get; set; }
 }
 
 public class InputUpdateMemberImageView : InputCreateMemberImageView

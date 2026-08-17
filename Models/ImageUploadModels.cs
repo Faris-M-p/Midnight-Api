@@ -17,3 +17,9 @@ public class ImageUploadRequest
     public long FamilyId { get; init; }
     public long? EntityId { get; init; }
 }
+
+public sealed class ImageSaveResult
+{
+    public required string Url { get; init; }
+    public required long FileSize { get; init; }
+}

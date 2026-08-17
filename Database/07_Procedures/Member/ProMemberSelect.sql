@@ -110,7 +110,8 @@ BEGIN
                     'ImageUrl', i."ImageUrl",
                     'Caption', i."Caption",
                     'IsPrimary', i."IsPrimary",
-                    'SortOrder', i."SortOrder"
+                    'SortOrder', i."SortOrder",
+                    'FileSize', COALESCE(i."FileSize", 0)
                 )
                 ORDER BY i."SortOrder"
             )

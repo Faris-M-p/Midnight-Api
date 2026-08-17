@@ -10,6 +10,8 @@
 \i 01_Tables/MemberEvents.sql
 \i 01_Tables/MemberNotes.sql
 \i 01_Tables/MemberSocialLinks.sql
+\i 01_Tables/Memories.sql
+\i 01_Tables/MemoryImages.sql
 \i 01_Tables/UserAccounts.sql
 
 \echo '=== 02_Functions ==='
@@ -59,6 +61,18 @@
 \i 07_Procedures/Member/ProMemberHasRoot.sql
 \i 07_Procedures/Member/ProMemberGetParentId.sql
 \i 07_Procedures/Member/ProMemberGetRelation.sql
+
+\i 07_Procedures/Family/ProFamilyStorageSelect.sql
+\i 07_Procedures/Memory/ProMemoryList.sql
+\i 07_Procedures/Memory/ProMemorySelect.sql
+\i 07_Procedures/Memory/ProMemoryInsert.sql
+\i 07_Procedures/Memory/ProMemoryUpdate.sql
+\i 07_Procedures/Memory/ProMemoryDelete.sql
+\i 07_Procedures/Memory/ProMemoryImageUploadContext.sql
+\i 07_Procedures/Memory/ProMemoryImageCommit.sql
+\i 07_Procedures/Memory/ProMemoryImageGet.sql
+\i 07_Procedures/Memory/ProMemoryImageDelete.sql
+\i 07_Procedures/Memory/ProMemoryCoverSet.sql
 
 \echo '=== 08_SeedData ==='
 \i 08_SeedData/DefaultSettings.sql

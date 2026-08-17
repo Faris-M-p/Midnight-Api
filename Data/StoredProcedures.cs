@@ -8,6 +8,7 @@ public static class StoredProcedures
     public const string FamilyUpdateCover = "ProFamilyUpdateCover";
     public const string FamilyExistsByCode = "ProFamilyExistsByCode";
     public const string FamilySelectByCode = "ProFamilySelectByCode";
+    public const string FamilyStorageSelect = "ProFamilyStorageSelect";
 
     public const string AccountSelect = "ProAccountSelect";
     public const string AccountLogin = "ProAccountLogin";
@@ -45,4 +46,15 @@ public static class StoredProcedures
     public const string AccessTokenDelete = "ProAccessTokenDelete";
     public const string AccessTokenListForLogin = "ProAccessTokenListForLogin";
     public const string AccessTokenRecordLogin = "ProAccessTokenRecordLogin";
+
+    public const string MemoryList = "ProMemoryList";
+    public const string MemorySelect = "ProMemorySelect";
+    public const string MemoryInsert = "ProMemoryInsert";
+    public const string MemoryUpdate = "ProMemoryUpdate";
+    public const string MemoryDelete = "ProMemoryDelete";
+    public const string MemoryImageUploadContext = "ProMemoryImageUploadContext";
+    public const string MemoryImageCommit = "ProMemoryImageCommit";
+    public const string MemoryImageGet = "ProMemoryImageGet";
+    public const string MemoryImageDelete = "ProMemoryImageDelete";
+    public const string MemoryCoverSet = "ProMemoryCoverSet";
 }

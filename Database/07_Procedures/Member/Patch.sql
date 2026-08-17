@@ -1,9 +1,9 @@
 -- Uncomment to update member PROCEDURES.
 -- \ir ProMemberList.sql
 -- \ir ProMemberTree.sql
--- \ir ProMemberSelect.sql
--- \ir ProMemberInsert.sql
--- \ir ProMemberUpdate.sql
+\ir ProMemberSelect.sql
+\ir ProMemberInsert.sql
+\ir ProMemberUpdate.sql
 -- \ir ProMemberDelete.sql
 -- \ir ProMemberMapSpouse.sql
 -- \ir ProMemberDashboard.sql

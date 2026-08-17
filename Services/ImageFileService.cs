@@ -17,7 +17,7 @@ public class ImageFileService : IImageFileService
 
     private const long MaxFileBytes = 5 * 1024 * 1024;
 
-    public async Task<string> SaveAsync(
+    public async Task<ImageSaveResult> SaveAsync(
         ImageUploadRequest upload,
         HttpRequest request,
         CancellationToken cancellationToken = default)
@@ -56,13 +56,31 @@ public class ImageFileService : IImageFileService
 
         var fileName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
         var fullPath = Path.Combine(physicalFolder, fileName);
+        long written;
         await using (var stream = System.IO.File.Create(fullPath))
         {
             await file.CopyToAsync(stream, cancellationToken);
+            written = stream.Length;
+        }
+
+        if (written <= 0)
+        {
+            TryDelete(fullPath);
+            throw new BadRequestException("Please choose an image.");
+        }
+
+        if (written > MaxFileBytes)
+        {
+            TryDelete(fullPath);
+            throw new BadRequestException("Image must be 5 MB or smaller.");
         }
 
         var baseUrl = $"{request.Scheme}://{request.Host}{request.PathBase}".TrimEnd('/');
-        return $"{baseUrl}/uploads/{string.Join('/', segments)}/{fileName}";
+        return new ImageSaveResult
+        {
+            Url = $"{baseUrl}/uploads/{string.Join('/', segments)}/{fileName}",
+            FileSize = written
+        };
     }
 
     private static string[] ResolveFolder(ImageUploadRequest upload)
@@ -88,5 +106,20 @@ public class ImageFileService : IImageFileService
                 : ["events", familyId, entityId],
             _ => throw new BadRequestException("Unsupported image upload mode.")
         };
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch
+        {
+            // Best-effort cleanup.
+        }
     }
 }

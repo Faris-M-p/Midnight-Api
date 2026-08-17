@@ -52,6 +52,21 @@ public class FamilyController : ControllerBase
         });
     }
 
+    [HttpGet("storage")]
+    public async Task<IActionResult> GetStorage([FromServices] IFamilyStorageService storage)
+    {
+        var data = await storage.GetStorageUsageAsync(User.GetFamilyId());
+
+        return Ok(new ApiResponse<OutputFamilyStorageUsage>
+        {
+            Success = true,
+            StatusCode = StatusCodes.Status200OK,
+            Message = "Success.",
+            Data = data,
+            TraceId = HttpContext.TraceIdentifier
+        });
+    }
+
     [HttpPut]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(6 * 1024 * 1024)]
@@ -64,7 +79,7 @@ public class FamilyController : ControllerBase
         var photoUrl = request.PhotoUrl;
         if (request.FamilyPhoto is { Length: > 0 })
         {
-            photoUrl = await _images.SaveAsync(
+            var saved = await _images.SaveAsync(
                 new ImageUploadRequest
                 {
                     File = request.FamilyPhoto,
@@ -73,6 +88,7 @@ public class FamilyController : ControllerBase
                 },
                 Request,
                 cancellationToken);
+            photoUrl = saved.Url;
         }
         else if (string.IsNullOrWhiteSpace(photoUrl))
         {
@@ -107,7 +123,7 @@ public class FamilyController : ControllerBase
         }
 
         var familyId = User.GetFamilyId();
-        var coverUrl = await _images.SaveAsync(
+        var saved = await _images.SaveAsync(
             new ImageUploadRequest
             {
                 File = request.FamilyCover,
@@ -116,6 +132,7 @@ public class FamilyController : ControllerBase
             },
             Request,
             cancellationToken);
+        var coverUrl = saved.Url;
 
         var result = await _families.UpdateCoverAsync(new InputUpdateFamilyCover
         {

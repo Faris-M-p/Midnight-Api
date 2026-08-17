@@ -64,9 +64,7 @@ public class CommonService : ICommonService
         throw result.ResponseCode switch
         {
             30 => new NotFoundException(message),
-            20 when message.Contains("already exists", StringComparison.OrdinalIgnoreCase)
-                => new ConflictException(message),
-            -1 => new BadRequestException(message),
+            20 => new ConflictException(message),
             _ => new BadRequestException(message)
         };
     }

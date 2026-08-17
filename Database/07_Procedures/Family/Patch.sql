@@ -6,3 +6,4 @@
 -- \ir ProFamilyExistsByCode.sql
 -- \ir ProFamilySelect.sql
 -- \ir ProFamilyUpdateCover.sql
+\ir ProFamilyStorageSelect.sql

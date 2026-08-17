@@ -32,6 +32,7 @@
 \ir 07_Procedures/Story/Patch.sql
 \ir 07_Procedures/Notification/Patch.sql
 \ir 07_Procedures/AccessToken/Patch.sql
+\ir 07_Procedures/Memory/Patch.sql
 
 \echo '=== Patch 08_SeedData ==='
 \ir 08_SeedData/Patch.sql

@@ -4,7 +4,7 @@ namespace MidnightApi.Services.Interfaces;
 
 public interface IImageFileService
 {
-    Task<string> SaveAsync(
+    Task<ImageSaveResult> SaveAsync(
         ImageUploadRequest upload,
         HttpRequest request,
         CancellationToken cancellationToken = default);

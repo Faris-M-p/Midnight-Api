@@ -90,7 +90,7 @@ BEGIN
         FOR v_item IN SELECT * FROM jsonb_array_elements("p_Images")
         LOOP
             INSERT INTO "MemberImages" (
-                "FK_Members", "ImageUrl", "Caption", "IsPrimary", "SortOrder",
+                "FK_Members", "ImageUrl", "Caption", "IsPrimary", "SortOrder", "FileSize",
                 "CreatedBy", "CreatedOn"
             )
             VALUES (
@@ -99,6 +99,7 @@ BEGIN
                 v_item->>'Caption',
                 COALESCE((v_item->>'IsPrimary')::BOOLEAN, FALSE),
                 COALESCE((v_item->>'SortOrder')::INTEGER, 0),
+                COALESCE(NULLIF(v_item->>'FileSize', '')::BIGINT, 0),
                 "p_CreatedBy",
                 NOW()
             );

@@ -138,6 +138,10 @@ BEGIN
                     "Caption" = v_item->>'Caption',
                     "IsPrimary" = COALESCE((v_item->>'IsPrimary')::BOOLEAN, FALSE),
                     "SortOrder" = COALESCE((v_item->>'SortOrder')::INTEGER, 0),
+                    "FileSize" = COALESCE(
+                        NULLIF(v_item->>'FileSize', '')::BIGINT,
+                        "FileSize"
+                    ),
                     "UpdatedBy" = "p_UpdatedBy",
                     "UpdatedOn" = NOW()
                 WHERE "ID_MemberImages" = v_id
@@ -150,7 +154,7 @@ BEGIN
                 v_keep := array_append(v_keep, v_id);
             ELSE
                 INSERT INTO "MemberImages" (
-                    "FK_Members", "ImageUrl", "Caption", "IsPrimary", "SortOrder",
+                    "FK_Members", "ImageUrl", "Caption", "IsPrimary", "SortOrder", "FileSize",
                     "CreatedBy", "CreatedOn"
                 )
                 VALUES (
@@ -159,6 +163,7 @@ BEGIN
                     v_item->>'Caption',
                     COALESCE((v_item->>'IsPrimary')::BOOLEAN, FALSE),
                     COALESCE((v_item->>'SortOrder')::INTEGER, 0),
+                    COALESCE(NULLIF(v_item->>'FileSize', '')::BIGINT, 0),
                     "p_UpdatedBy",
                     NOW()
                 )

@@ -17,17 +17,20 @@ public class MemberController : ControllerBase
     private readonly IMembersRepository _members;
     private readonly ICommonService _commonService;
     private readonly IImageFileService _images;
+    private readonly IFamilyStorageService _storage;
     private readonly IAccessAuthorizationService _authz;
 
     public MemberController(
         IMembersRepository members,
         ICommonService commonService,
         IImageFileService images,
+        IFamilyStorageService storage,
         IAccessAuthorizationService authz)
     {
         _members = members;
         _commonService = commonService;
         _images = images;
+        _storage = storage;
         _authz = authz;
     }
 
@@ -107,7 +110,9 @@ public class MemberController : ControllerBase
         var images = request.Images ?? [];
         if (request.ProfileImage is { Length: > 0 })
         {
-            var url = await _images.SaveAsync(
+            await _storage.EnsureCanUploadAsync(User.GetFamilyId(), request.ProfileImage.Length);
+
+            var saved = await _images.SaveAsync(
                 new ImageUploadRequest
                 {
                     File = request.ProfileImage,
@@ -117,14 +122,17 @@ public class MemberController : ControllerBase
                 Request,
                 cancellationToken);
 
+            await _storage.EnsureCanUploadAsync(User.GetFamilyId(), saved.FileSize);
+
             images =
             [
                 new InputCreateMemberImageView
                 {
-                    ImageUrl = url,
+                    ImageUrl = saved.Url,
                     Caption = "Profile",
                     IsPrimary = true,
-                    SortOrder = 0
+                    SortOrder = 0,
+                    FileSize = saved.FileSize
                 },
                 ..images
             ];
@@ -184,7 +192,9 @@ public class MemberController : ControllerBase
         var images = request.Images;
         if (request.ProfileImage is { Length: > 0 })
         {
-            var url = await _images.SaveAsync(
+            await _storage.EnsureCanUploadAsync(User.GetFamilyId(), request.ProfileImage.Length);
+
+            var saved = await _images.SaveAsync(
                 new ImageUploadRequest
                 {
                     File = request.ProfileImage,
@@ -193,6 +203,8 @@ public class MemberController : ControllerBase
                 },
                 Request,
                 cancellationToken);
+
+            await _storage.EnsureCanUploadAsync(User.GetFamilyId(), saved.FileSize);
 
             images ??= (await _members.GetByIdAsync(new InputGetMember
             {
@@ -205,7 +217,8 @@ public class MemberController : ControllerBase
                     ImageUrl = img.ImageUrl,
                     Caption = img.Caption,
                     IsPrimary = false,
-                    SortOrder = img.SortOrder
+                    SortOrder = img.SortOrder,
+                    FileSize = img.FileSize
                 })
                 .ToList() ?? [];
 
@@ -216,10 +229,11 @@ public class MemberController : ControllerBase
 
             images.Insert(0, new InputUpdateMemberImageView
             {
-                ImageUrl = url,
+                ImageUrl = saved.Url,
                 Caption = "Profile",
                 IsPrimary = true,
-                SortOrder = 0
+                SortOrder = 0,
+                FileSize = saved.FileSize
             });
         }
 

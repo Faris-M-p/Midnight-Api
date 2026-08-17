@@ -59,6 +59,7 @@ ScaffoldingReadMe.txt
 ##############################
 wwwroot/uploads/
 wwwroot/temp/
+App_Data/storage/
 
 ##############################
 # Secrets
