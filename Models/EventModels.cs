@@ -14,28 +14,15 @@ public class FamilyEvent
     public long FK_Families { get; set; }
     public string Title { get; set; } = string.Empty;
     public string EventType { get; set; } = string.Empty;
-    public DateTime EventDate { get; set; }
-    public TimeSpan? EventTime { get; set; }
-    public string? Location { get; set; }
+    public DateTimeOffset EventDateTime { get; set; }
+    public string? LocationName { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
     public string? Description { get; set; }
-    public string CreatedBy { get; set; } = "system";
-    public DateTime CreatedOn { get; set; }
-    public string? UpdatedBy { get; set; }
-    public DateTime? UpdatedOn { get; set; }
-    public bool IsCancelled { get; set; }
-    public string? CancelledBy { get; set; }
-    public DateTime? CancelledOn { get; set; }
-}
-
-/// <summary>
-/// Entity shape for table "EventMembers".
-/// </summary>
-public class EventMember
-{
-    public long ID_EventMembers { get; set; }
-    public long FK_Events { get; set; }
-    public long FK_Members { get; set; }
-    public long FK_Families { get; set; }
+    public string? CoverImageUrl { get; set; }
+    public string? CoverStorageKey { get; set; }
+    public long CoverFileSize { get; set; }
+    public string? CoverMimeType { get; set; }
     public string CreatedBy { get; set; } = "system";
     public DateTime CreatedOn { get; set; }
     public string? UpdatedBy { get; set; }
@@ -85,20 +72,18 @@ public class InputCreateEventView
     [MidnightApi.Validation.CustomModelValidation.AllowedValues("birthday", "anniversary", "memorial", "gathering", "achievement", "custom")]
     public string EventType { get; set; } = string.Empty;
 
-    [Display(Name = "Event Date")]
+    [Display(Name = "Event Date & Time")]
     [Required]
-    public DateTime EventDate { get; set; }
-
-    [Display(Name = "Event Time")]
-    [StringLength(8)]
-    [TrimmedString]
-    public string? EventTime { get; set; }
+    public DateTimeOffset EventDateTime { get; set; }
 
     [Display(Name = "Location")]
-    [StringLength(200)]
+    [StringLength(500)]
     [TrimmedString]
     [NoScriptTags]
-    public string? Location { get; set; }
+    public string? LocationName { get; set; }
+
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
 
     [Display(Name = "Description")]
     [StringLength(4000)]
@@ -107,6 +92,9 @@ public class InputCreateEventView
 
     [Display(Name = "Members")]
     public List<long>? MemberIds { get; set; }
+
+    [Display(Name = "Cover Image")]
+    public IFormFile? CoverImage { get; set; }
 }
 
 public class InputUpdateEventView
@@ -123,20 +111,18 @@ public class InputUpdateEventView
     [MidnightApi.Validation.CustomModelValidation.AllowedValues("birthday", "anniversary", "memorial", "gathering", "achievement", "custom")]
     public string EventType { get; set; } = string.Empty;
 
-    [Display(Name = "Event Date")]
+    [Display(Name = "Event Date & Time")]
     [Required]
-    public DateTime EventDate { get; set; }
-
-    [Display(Name = "Event Time")]
-    [StringLength(8)]
-    [TrimmedString]
-    public string? EventTime { get; set; }
+    public DateTimeOffset EventDateTime { get; set; }
 
     [Display(Name = "Location")]
-    [StringLength(200)]
+    [StringLength(500)]
     [TrimmedString]
     [NoScriptTags]
-    public string? Location { get; set; }
+    public string? LocationName { get; set; }
+
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
 
     [Display(Name = "Description")]
     [StringLength(4000)]
@@ -145,15 +131,17 @@ public class InputUpdateEventView
 
     [Display(Name = "Members")]
     public List<long>? MemberIds { get; set; }
+
+    [Display(Name = "Cover Image")]
+    public IFormFile? CoverImage { get; set; }
+
+    public bool RemoveCover { get; set; }
 }
 
-// --- DB inputs ---
+// --- Repository inputs ---
 
-public class InputEventList
+public class InputEventList : CommonModel.BaseFamilyInput
 {
-    [DbParam("p_FK_Families")]
-    public long FamilyId { get; set; }
-
     [DbParam("p_Search")]
     public string? Search { get; set; }
 
@@ -167,52 +155,16 @@ public class InputEventList
     public int PageSize { get; set; } = 100;
 }
 
-public class InputGetEvent
+public class InputGetEvent : CommonModel.BaseFamilyInput
 {
-    [DbParam("p_FK_Families")]
-    public long FamilyId { get; set; }
-
     [DbParam("p_ID_Events")]
     public long Id { get; set; }
 }
 
-public class InputCreateEvent
+public class InputCreateEvent : CommonModel.BaseFamilyInput
 {
-    [DbParam("p_FK_Families")]
-    public long FamilyId { get; set; }
-
-    [DbParam("p_Title")]
-    public string Title { get; set; } = string.Empty;
-
-    [DbParam("p_EventType")]
-    public string EventType { get; set; } = string.Empty;
-
-    [DbParam("p_EventDate")]
-    public DateTime EventDate { get; set; }
-
-    [DbParam("p_EventTime")]
-    public string? EventTime { get; set; }
-
-    [DbParam("p_Location")]
-    public string? Location { get; set; }
-
-    [DbParam("p_Description")]
-    public string? Description { get; set; }
-
-    [DbParam("p_MemberIds")]
-    public string MemberIds { get; set; } = "[]";
-
     [DbParam("p_CreatedBy")]
     public string CreatedBy { get; set; } = string.Empty;
-}
-
-public class InputUpdateEvent
-{
-    [DbParam("p_FK_Families")]
-    public long FamilyId { get; set; }
-
-    [DbParam("p_ID_Events")]
-    public long Id { get; set; }
 
     [DbParam("p_Title")]
     public string Title { get; set; } = string.Empty;
@@ -220,35 +172,132 @@ public class InputUpdateEvent
     [DbParam("p_EventType")]
     public string EventType { get; set; } = string.Empty;
 
-    [DbParam("p_EventDate")]
-    public DateTime EventDate { get; set; }
+    [DbParam("p_EventDateTime")]
+    public DateTimeOffset EventDateTime { get; set; }
 
-    [DbParam("p_EventTime")]
-    public string? EventTime { get; set; }
-
-    [DbParam("p_Location")]
+    [DbParam("p_LocationName")]
     public string? Location { get; set; }
+
+    [DbParam("p_Latitude")]
+    public double? Latitude { get; set; }
+
+    [DbParam("p_Longitude")]
+    public double? Longitude { get; set; }
 
     [DbParam("p_Description")]
     public string? Description { get; set; }
 
+    [DbParam("p_CoverImageUrl")]
+    public string? CoverImageUrl { get; set; }
+
+    [DbParam("p_CoverStorageKey")]
+    public string? CoverStorageKey { get; set; }
+
+    [DbParam("p_CoverFileSize")]
+    public long CoverFileSize { get; set; }
+
+    [DbParam("p_CoverMimeType")]
+    public string? CoverMimeType { get; set; }
+
     [DbParam("p_MemberIds")]
-    public string MemberIds { get; set; } = "[]";
+    public string MemberIdsJson { get; set; } = "[]";
+
+    public List<long>? MemberIds
+    {
+        set => MemberIdsJson = EventMemberIdsJson.FromIds(value);
+    }
+}
+
+public class InputUpdateEvent : CommonModel.BaseFamilyInput
+{
+    [DbParam("p_ID_Events")]
+    public long Id { get; set; }
 
     [DbParam("p_UpdatedBy")]
     public string UpdatedBy { get; set; } = string.Empty;
+
+    [DbParam("p_Title")]
+    public string Title { get; set; } = string.Empty;
+
+    [DbParam("p_EventType")]
+    public string EventType { get; set; } = string.Empty;
+
+    [DbParam("p_EventDateTime")]
+    public DateTimeOffset EventDateTime { get; set; }
+
+    [DbParam("p_LocationName")]
+    public string? Location { get; set; }
+
+    [DbParam("p_Latitude")]
+    public double? Latitude { get; set; }
+
+    [DbParam("p_Longitude")]
+    public double? Longitude { get; set; }
+
+    [DbParam("p_Description")]
+    public string? Description { get; set; }
+
+    [DbParam("p_RemoveCover")]
+    public bool RemoveCover { get; set; }
+
+    [DbParam("p_CoverImageUrl")]
+    public string? CoverImageUrl { get; set; }
+
+    [DbParam("p_CoverStorageKey")]
+    public string? CoverStorageKey { get; set; }
+
+    [DbParam("p_CoverFileSize")]
+    public long CoverFileSize { get; set; }
+
+    [DbParam("p_CoverMimeType")]
+    public string? CoverMimeType { get; set; }
+
+    [DbParam("p_MemberIds")]
+    public string MemberIdsJson { get; set; } = "[]";
+
+    public List<long>? MemberIds
+    {
+        set => MemberIdsJson = EventMemberIdsJson.FromIds(value);
+    }
 }
 
-public class InputDeleteEvent
+public class InputDeleteEvent : CommonModel.BaseFamilyInput
 {
-    [DbParam("p_FK_Families")]
-    public long FamilyId { get; set; }
-
     [DbParam("p_ID_Events")]
     public long Id { get; set; }
 
     [DbParam("p_CancelledBy")]
     public string CancelledBy { get; set; } = string.Empty;
+}
+
+public class InputEventCoverCommit : CommonModel.BaseFamilyInput
+{
+    [DbParam("p_ID_Events")]
+    public long Id { get; set; }
+
+    [DbParam("p_CoverImageUrl")]
+    public string CoverImageUrl { get; set; } = string.Empty;
+
+    [DbParam("p_CoverStorageKey")]
+    public string CoverStorageKey { get; set; } = string.Empty;
+
+    [DbParam("p_CoverFileSize")]
+    public long CoverFileSize { get; set; }
+
+    [DbParam("p_CoverMimeType")]
+    public string? CoverMimeType { get; set; }
+
+    [DbParam("p_UpdatedBy")]
+    public string UpdatedBy { get; set; } = string.Empty;
+}
+
+public class InputEventCoverRemove : CommonModel.BaseFamilyInput
+{
+    [DbParam("p_ID_Events")]
+    public long Id { get; set; }
+
+    [DbParam("p_UpdatedBy")]
+    public string UpdatedBy { get; set; } = string.Empty;
 }
 
 // --- Outputs ---
@@ -267,11 +316,15 @@ public class OutputEventListItem
     public long Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public string EventType { get; set; } = string.Empty;
-    public DateTime EventDate { get; set; }
-    public string? EventTime { get; set; }
-    public string? Location { get; set; }
+    public DateTimeOffset EventDateTime { get; set; }
+    public string? LocationName { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
     public string? Description { get; set; }
+    public string? CoverImageUrl { get; set; }
     public int MemberCount { get; set; }
+    public string? MemberNames { get; set; }
+    public List<OutputEventMemberItem> Members { get; set; } = [];
     public DateTime CreatedOn { get; set; }
 }
 
@@ -289,25 +342,40 @@ public class OutputGetEvent
     public long Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public string EventType { get; set; } = string.Empty;
-    public DateTime EventDate { get; set; }
-    public string? EventTime { get; set; }
-    public string? Location { get; set; }
+    public DateTimeOffset EventDateTime { get; set; }
+    public string? LocationName { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
     public string? Description { get; set; }
+    public string? CoverImageUrl { get; set; }
+    public string? CoverStorageKey { get; set; }
+    public long CoverFileSize { get; set; }
+    public string? CoverMimeType { get; set; }
     public List<OutputEventMemberItem> Members { get; set; } = [];
     public DateTime CreatedOn { get; set; }
     public DateTime? UpdatedOn { get; set; }
 }
 
-public class OutputCreateEvent : CommonResponse<IdResponse>
+public class OutputCreateEvent : CommonResponse<OutputGetEvent>
 {
 }
 
-public class OutputUpdateEvent : CommonResponse<IdResponse>
+public class OutputUpdateEvent : CommonResponse<OutputGetEvent>
 {
 }
 
 public class OutputDeleteEvent : CommonResponse<IdResponse>
 {
+}
+
+public class OutputEventCoverAction : CommonResponse<EventCoverActionData>
+{
+}
+
+public class EventCoverActionData
+{
+    public long Id { get; set; }
+    public string? PreviousStorageKey { get; set; }
 }
 
 public static class EventMemberIdsJson

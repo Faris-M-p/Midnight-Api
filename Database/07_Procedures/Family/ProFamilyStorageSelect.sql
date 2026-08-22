@@ -7,6 +7,7 @@ AS $$
 DECLARE
     v_member_bytes BIGINT := 0;
     v_memory_bytes BIGINT := 0;
+    v_event_bytes BIGINT := 0;
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM "Families"
@@ -32,11 +33,18 @@ BEGIN
     WHERE img."FK_Families" = "p_FK_Families"
       AND img."IsCancelled" = FALSE;
 
+    SELECT COALESCE(SUM(e."CoverFileSize"), 0)
+    INTO v_event_bytes
+    FROM "Events" e
+    WHERE e."FK_Families" = "p_FK_Families"
+      AND e."IsCancelled" = FALSE;
+
     "p_Data" := jsonb_build_object(
         'FamilyId', "p_FK_Families",
         'MemberImagesStorageBytes', v_member_bytes,
         'MemoryImagesStorageBytes', v_memory_bytes,
-        'StorageUsedBytes', v_member_bytes + v_memory_bytes
+        'EventCoverStorageBytes', v_event_bytes,
+        'StorageUsedBytes', v_member_bytes + v_memory_bytes + v_event_bytes
     );
 END;
 $$;

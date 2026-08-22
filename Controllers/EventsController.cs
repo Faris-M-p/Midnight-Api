@@ -14,18 +14,26 @@ namespace MidnightApi.Controllers;
 [Authorize]
 public class EventsController : ControllerBase
 {
+    private const long MultipartLimitBytes = 11L * 1024 * 1024;
+
     private readonly IEventsRepository _iEventsRepository;
     private readonly ICommonService _iCommonService;
     private readonly IAccessAuthorizationService _iAccessAuthorizationService;
+    private readonly IFileStorageService _iFileStorageService;
+    private readonly IFamilyStorageService _iFamilyStorageService;
 
     public EventsController(
-        IEventsRepository events,
+        IEventsRepository eventsRepository,
         ICommonService commonService,
-        IAccessAuthorizationService authz)
+        IAccessAuthorizationService authz,
+        IFileStorageService fileStorageService,
+        IFamilyStorageService familyStorageService)
     {
-        _iEventsRepository = events;
+        _iEventsRepository = eventsRepository;
         _iCommonService = commonService;
         _iAccessAuthorizationService = authz;
+        _iFileStorageService = fileStorageService;
+        _iFamilyStorageService = familyStorageService;
     }
 
     [HttpGet]
@@ -74,97 +82,202 @@ public class EventsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] InputCreateEventView request)
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(MultipartLimitBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = MultipartLimitBytes)]
+    public async Task<IActionResult> Create(
+        [FromForm] InputCreateEventView request,
+        CancellationToken cancellationToken)
     {
         _iCommonService.ValidateModelState(ModelState);
         _iAccessAuthorizationService.EnsureCanEditFamily(User);
 
-        var data = await _iEventsService.CreateAsync(
-        {
-            FamilyId = User.GetFamilyId(),
-            Title = request.Title,
-            EventType = request.EventType,
-            EventDate = request.EventDate.Date,
-            EventTime = TrimOptional(request.EventTime),
-            Location = request.Location,
-            Description = request.Description,
-            MemberIds = EventMemberIdsJson.FromIds(request.MemberIds),
-            CreatedBy = User.GetUsername()
-        });
-        _iCommonService.EnsureSuccess(create);
+        var familyId = User.GetFamilyId();
+        var username = User.GetUsername();
 
-        var data = await _iEventsRepository.GetByIdAsync(new InputGetEvent
-        {
-            FamilyId = User.GetFamilyId(),
-            Id = create.ResponseCode
-        }) ?? throw new NotFoundException("Event not found.");
+        FileStorageUploadResult? uploadedCover = null;
 
-        return StatusCode(StatusCodes.Status201Created, new ApiResponse<OutputGetEvent>
+        try
         {
-            Success = true,
-            StatusCode = StatusCodes.Status201Created,
-            Message = "Event created successfully.",
-            Data = data,
-            TraceId = HttpContext.TraceIdentifier
-        });
+            if (request.CoverImage is { Length: > 0 })
+            {
+                await _iFamilyStorageService.EnsureCanUploadAsync(familyId, request.CoverImage.Length);
+
+                await using (var stream = request.CoverImage.OpenReadStream())
+                {
+                    uploadedCover = await _iFileStorageService.UploadAsync(new FileStorageUploadRequest
+                    {
+                        FamilyId = familyId,
+                        EventId = 0,
+                        Content = stream,
+                        OriginalFileName = request.CoverImage.FileName,
+                        ContentType = request.CoverImage.ContentType,
+                        ContentLength = request.CoverImage.Length
+                    }, cancellationToken);
+                }
+
+                await _iFamilyStorageService.EnsureCanUploadAsync(familyId, uploadedCover.FileSize);
+            }
+
+            var result = await _iEventsRepository.CreateAsync(new InputCreateEvent
+            {
+                FamilyId = familyId,
+                CreatedBy = username,
+                Title = request.Title,
+                EventType = request.EventType,
+                EventDateTime = request.EventDateTime.ToUniversalTime(),
+                Location = request.LocationName,
+                Latitude = request.Latitude,
+                Longitude = request.Longitude,
+                Description = request.Description,
+                MemberIds = request.MemberIds,
+                CoverImageUrl = uploadedCover?.FileUrl,
+                CoverStorageKey = uploadedCover?.StorageKey,
+                CoverFileSize = uploadedCover?.FileSize ?? 0,
+                CoverMimeType = uploadedCover?.MimeType
+            });
+            _iCommonService.EnsureSuccess(result);
+
+            var data = result.Data ?? throw new NotFoundException("Event not found.");
+
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<OutputGetEvent>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Event created successfully.",
+                Data = data,
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+        catch
+        {
+            if (uploadedCover is not null
+                && !string.IsNullOrWhiteSpace(uploadedCover.StorageKey)
+                && await _iFileStorageService.ExistsAsync(uploadedCover.StorageKey, cancellationToken))
+            {
+                await _iFileStorageService.DeleteAsync(uploadedCover.StorageKey, cancellationToken);
+            }
+
+            throw;
+        }
     }
 
     [HttpPut("{id:long}")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(MultipartLimitBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = MultipartLimitBytes)]
     public async Task<IActionResult> Update(
         [FromRoute] InputEventRouteRequestView route,
-        [FromBody] InputUpdateEventView request)
+        [FromForm] InputUpdateEventView request,
+        CancellationToken cancellationToken)
     {
         _iCommonService.ValidateModelState(ModelState);
         _iAccessAuthorizationService.EnsureCanEditFamily(User);
 
-        _ = await _iEventsRepository.GetByIdAsync(new InputGetEvent
+        var familyId = User.GetFamilyId();
+        var username = User.GetUsername();
+        var existing = await _iEventsRepository.GetByIdAsync(new InputGetEvent
         {
-            FamilyId = User.GetFamilyId(),
+            FamilyId = familyId,
             Id = route.Id
         }) ?? throw new NotFoundException("Event not found.");
 
-        var update = await _iEventsRepository.UpdateAsync(new InputUpdateEvent
-        {
-            FamilyId = User.GetFamilyId(),
-            Id = route.Id,
-            Title = request.Title,
-            EventType = request.EventType,
-            EventDate = request.EventDate.Date,
-            EventTime = TrimOptional(request.EventTime),
-            Location = request.Location,
-            Description = request.Description,
-            MemberIds = EventMemberIdsJson.FromIds(request.MemberIds),
-            UpdatedBy = User.GetUsername()
-        });
-        _iCommonService.EnsureSuccess(update);
+        FileStorageUploadResult? uploadedCover = null;
 
-        var data = await _iEventsRepository.GetByIdAsync(new InputGetEvent
+        try
         {
-            FamilyId = User.GetFamilyId(),
-            Id = route.Id
-        }) ?? throw new NotFoundException("Event not found.");
+            if (!request.RemoveCover && request.CoverImage is { Length: > 0 })
+            {
+                await _iFamilyStorageService.EnsureCanUploadAsync(familyId, request.CoverImage.Length);
 
-        return Ok(new ApiResponse<OutputGetEvent>
+                await using (var stream = request.CoverImage.OpenReadStream())
+                {
+                    uploadedCover = await _iFileStorageService.UploadAsync(new FileStorageUploadRequest
+                    {
+                        FamilyId = familyId,
+                        EventId = 0,
+                        Content = stream,
+                        OriginalFileName = request.CoverImage.FileName,
+                        ContentType = request.CoverImage.ContentType,
+                        ContentLength = request.CoverImage.Length
+                    }, cancellationToken);
+                }
+
+                await _iFamilyStorageService.EnsureCanUploadAsync(familyId, uploadedCover.FileSize);
+            }
+
+            var result = await _iEventsRepository.UpdateAsync(new InputUpdateEvent
+            {
+                FamilyId = familyId,
+                Id = route.Id,
+                UpdatedBy = username,
+                Title = request.Title,
+                EventType = request.EventType,
+                EventDateTime = request.EventDateTime.ToUniversalTime(),
+                Location = request.LocationName,
+                Latitude = request.Latitude,
+                Longitude = request.Longitude,
+                Description = request.Description,
+                MemberIds = request.MemberIds,
+                RemoveCover = request.RemoveCover,
+                CoverImageUrl = uploadedCover?.FileUrl,
+                CoverStorageKey = uploadedCover?.StorageKey,
+                CoverFileSize = uploadedCover?.FileSize ?? 0,
+                CoverMimeType = uploadedCover?.MimeType
+            });
+            _iCommonService.EnsureSuccess(result);
+
+            var data = result.Data ?? throw new NotFoundException("Event not found.");
+
+            if ((request.RemoveCover || uploadedCover is not null)
+                && !string.IsNullOrWhiteSpace(existing.CoverStorageKey)
+                && !string.Equals(existing.CoverStorageKey, uploadedCover?.StorageKey, StringComparison.Ordinal)
+                && await _iFileStorageService.ExistsAsync(existing.CoverStorageKey, cancellationToken))
+            {
+                await _iFileStorageService.DeleteAsync(existing.CoverStorageKey, cancellationToken);
+            }
+
+            return Ok(new ApiResponse<OutputGetEvent>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Event updated successfully.",
+                Data = data,
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+        catch
         {
-            Success = true,
-            StatusCode = StatusCodes.Status200OK,
-            Message = "Event updated successfully.",
-            Data = data,
-            TraceId = HttpContext.TraceIdentifier
-        });
+            if (uploadedCover is not null
+                && !string.IsNullOrWhiteSpace(uploadedCover.StorageKey)
+                && await _iFileStorageService.ExistsAsync(uploadedCover.StorageKey, cancellationToken))
+            {
+                await _iFileStorageService.DeleteAsync(uploadedCover.StorageKey, cancellationToken);
+            }
+
+            throw;
+        }
     }
 
     [HttpDelete("{id:long}")]
-    public async Task<IActionResult> Delete([FromRoute] InputEventRouteRequestView route)
+    public async Task<IActionResult> Delete(
+        [FromRoute] InputEventRouteRequestView route,
+        CancellationToken cancellationToken)
     {
         _iCommonService.ValidateModelState(ModelState);
         _iAccessAuthorizationService.EnsureCanEditFamily(User);
 
-        _ = await _iEventsRepository.GetByIdAsync(new InputGetEvent
+        var existing = await _iEventsRepository.GetByIdAsync(new InputGetEvent
         {
             FamilyId = User.GetFamilyId(),
             Id = route.Id
         }) ?? throw new NotFoundException("Event not found.");
+
+        if (!string.IsNullOrWhiteSpace(existing.CoverStorageKey)
+            && await _iFileStorageService.ExistsAsync(existing.CoverStorageKey, cancellationToken))
+        {
+            await _iFileStorageService.DeleteAsync(existing.CoverStorageKey, cancellationToken);
+        }
 
         var result = await _iEventsRepository.SoftDeleteAsync(new InputDeleteEvent
         {
@@ -182,11 +295,5 @@ public class EventsController : ControllerBase
             Data = null,
             TraceId = HttpContext.TraceIdentifier
         });
-    }
-
-    private static string? TrimOptional(string? value)
-    {
-        var trimmed = value?.Trim();
-        return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
     }
 }

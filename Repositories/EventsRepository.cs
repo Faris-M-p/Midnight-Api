@@ -7,6 +7,13 @@ namespace MidnightApi.Repositories;
 
 public class EventsRepository : IEventsRepository
 {
+    private static readonly HashSet<string> AllowedSort = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "date",
+        "recent",
+        "title"
+    };
+
     private readonly IDataAccessDapper _iDataAccessDapper;
 
     public EventsRepository(IDataAccessDapper dataAccessDapper)
@@ -16,19 +23,20 @@ public class EventsRepository : IEventsRepository
 
     public async Task<OutputPagedEvents?> GetListAsync(InputEventList input)
     {
+        input.SortBy = NormalizeSort(input.SortBy);
+        input.Page = Math.Max(input.Page, 1);
+        input.PageSize = Math.Clamp(input.PageSize <= 0 ? 100 : input.PageSize, 1, 200);
+
         var (items, totalCount) = await _iDataAccessDapper.GetPagedListByStoredProcedureAsync<OutputEventListItem>(
             StoredProcedures.EventList, input);
-
-        var page = Math.Max(input.Page, 1);
-        var pageSize = Math.Clamp(input.PageSize <= 0 ? 100 : input.PageSize, 1, 200);
 
         return new OutputPagedEvents
         {
             Items = items,
-            Page = page,
-            PageSize = pageSize,
+            Page = input.Page,
+            PageSize = input.PageSize,
             TotalCount = totalCount,
-            TotalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize)
+            TotalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)input.PageSize)
         };
     }
 
@@ -47,4 +55,18 @@ public class EventsRepository : IEventsRepository
     public Task<OutputDeleteEvent> SoftDeleteAsync(InputDeleteEvent input) =>
         _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputDeleteEvent>(
             StoredProcedures.EventDelete, input);
+
+    public Task<OutputEventCoverAction> CommitCoverAsync(InputEventCoverCommit input) =>
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputEventCoverAction>(
+            StoredProcedures.EventCoverCommit, input);
+
+    public Task<OutputEventCoverAction> RemoveCoverAsync(InputEventCoverRemove input) =>
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputEventCoverAction>(
+            StoredProcedures.EventCoverRemove, input);
+
+    private static string NormalizeSort(string? sortBy)
+    {
+        var value = string.IsNullOrWhiteSpace(sortBy) ? "date" : sortBy.Trim().ToLowerInvariant();
+        return AllowedSort.Contains(value) ? value : "date";
+    }
 }

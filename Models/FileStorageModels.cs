@@ -3,7 +3,8 @@ namespace MidnightApi.Models;
 public sealed class FileStorageUploadRequest
 {
     public required long FamilyId { get; init; }
-    public required long MemoryId { get; init; }
+    public long MemoryId { get; init; }
+    public long EventId { get; init; }
     public required Stream Content { get; init; }
     public required string OriginalFileName { get; init; }
     public string? ContentType { get; init; }

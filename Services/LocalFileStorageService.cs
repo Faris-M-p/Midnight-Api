@@ -68,9 +68,9 @@ public sealed class LocalFileStorageService : IFileStorageService
             throw new BadRequestException("Family is required to store a file.");
         }
 
-        if (request.MemoryId <= 0)
+        if (request.MemoryId <= 0 && request.EventId < 0)
         {
-            throw new BadRequestException("Memory is required to store a file.");
+            throw new BadRequestException("A memory or event is required to store a file.");
         }
 
         var extension = NormalizeExtension(Path.GetExtension(request.OriginalFileName));
@@ -88,7 +88,11 @@ public sealed class LocalFileStorageService : IFileStorageService
         }
 
         var storedFileName = $"{Guid.NewGuid():N}{extension}";
-        var storageKey = BuildMemoryStorageKey(request.FamilyId, request.MemoryId, storedFileName);
+        var storageKey = request.EventId > 0
+            ? BuildEventStorageKey(request.FamilyId, request.EventId, storedFileName)
+            : request.MemoryId > 0
+                ? BuildMemoryStorageKey(request.FamilyId, request.MemoryId, storedFileName)
+                : BuildEventStagingStorageKey(request.FamilyId, storedFileName);
         var physicalPath = ResolvePhysicalPath(storageKey);
         var physicalFolder = Path.GetDirectoryName(physicalPath)
             ?? throw new InvalidOperationException("Unable to resolve storage folder.");
@@ -182,6 +186,12 @@ public sealed class LocalFileStorageService : IFileStorageService
 
     public static string BuildMemoryStorageKey(long familyId, long memoryId, string storedFileName) =>
         $"families/{familyId}/memories/{memoryId}/{storedFileName}";
+
+    public static string BuildEventStorageKey(long familyId, long eventId, string storedFileName) =>
+        $"families/{familyId}/events/{eventId}/{storedFileName}";
+
+    public static string BuildEventStagingStorageKey(long familyId, string storedFileName) =>
+        $"families/{familyId}/events/staging/{storedFileName}";
 
     private string ResolvePhysicalPath(string storageKey)
     {

@@ -9,4 +9,6 @@ public interface IEventsRepository
     Task<OutputCreateEvent> CreateAsync(InputCreateEvent input);
     Task<OutputUpdateEvent> UpdateAsync(InputUpdateEvent input);
     Task<OutputDeleteEvent> SoftDeleteAsync(InputDeleteEvent input);
+    Task<OutputEventCoverAction> CommitCoverAsync(InputEventCoverCommit input);
+    Task<OutputEventCoverAction> RemoveCoverAsync(InputEventCoverRemove input);
 }

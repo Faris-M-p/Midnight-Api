@@ -81,6 +81,8 @@
 \i 07_Procedures/Event/ProEventInsert.sql
 \i 07_Procedures/Event/ProEventUpdate.sql
 \i 07_Procedures/Event/ProEventDelete.sql
+\i 07_Procedures/Event/ProEventCoverCommit.sql
+\i 07_Procedures/Event/ProEventCoverRemove.sql
 
 \echo '=== 08_SeedData ==='
 \i 08_SeedData/DefaultSettings.sql

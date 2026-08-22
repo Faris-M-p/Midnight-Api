@@ -10,13 +10,15 @@ BEGIN
         'Id', e."ID_Events",
         'Title', e."Title",
         'EventType', e."EventType",
-        'EventDate', e."EventDate",
-        'EventTime', CASE
-            WHEN e."EventTime" IS NULL THEN NULL
-            ELSE to_char(e."EventTime", 'HH24:MI')
-        END,
-        'Location', e."Location",
+        'EventDateTime', e."EventDateTime",
+        'LocationName', e."LocationName",
+        'Latitude', e."Latitude",
+        'Longitude', e."Longitude",
         'Description', e."Description",
+        'CoverImageUrl', e."CoverImageUrl",
+        'CoverStorageKey', e."CoverStorageKey",
+        'CoverFileSize', e."CoverFileSize",
+        'CoverMimeType', e."CoverMimeType",
         'Members', COALESCE((
             SELECT jsonb_agg(
                 jsonb_build_object(

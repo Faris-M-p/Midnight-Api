@@ -63,4 +63,6 @@ public static class StoredProcedures
     public const string EventInsert = "ProEventInsert";
     public const string EventUpdate = "ProEventUpdate";
     public const string EventDelete = "ProEventDelete";
+    public const string EventCoverCommit = "ProEventCoverCommit";
+    public const string EventCoverRemove = "ProEventCoverRemove";
 }
