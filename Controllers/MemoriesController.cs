@@ -14,26 +14,26 @@ public class MemoriesController : ControllerBase
 {
     private const long CreateMultipartLimitBytes = 110L * 1024 * 1024;
 
-    private readonly IMemoriesService _memories;
-    private readonly ICommonService _commonService;
-    private readonly IAccessAuthorizationService _authz;
+    private readonly IMemoriesService _iMemoriesService;
+    private readonly ICommonService _iCommonService;
+    private readonly IAccessAuthorizationService _iAccessAuthorizationService;
 
     public MemoriesController(
         IMemoriesService memories,
         ICommonService commonService,
         IAccessAuthorizationService authz)
     {
-        _memories = memories;
-        _commonService = commonService;
-        _authz = authz;
+        _iMemoriesService = memories;
+        _iCommonService = commonService;
+        _iAccessAuthorizationService = authz;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetList([FromQuery] InputMemoryListQueryView query)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
-        var data = await _memories.ListAsync(User.GetFamilyId(), query);
+        var data = await _iMemoriesService.ListAsync(User.GetFamilyId(), query);
 
         return Ok(new ApiResponse<OutputPagedMemories>
         {
@@ -48,9 +48,9 @@ public class MemoriesController : ControllerBase
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetById([FromRoute] InputMemoryRouteRequestView route)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
-        var data = await _memories.GetAsync(User.GetFamilyId(), route.Id);
+        var data = await _iMemoriesService.GetAsync(User.GetFamilyId(), route.Id);
 
         return Ok(new ApiResponse<OutputGetMemory>
         {
@@ -70,10 +70,10 @@ public class MemoriesController : ControllerBase
         [FromForm] InputCreateMemoryView request,
         CancellationToken cancellationToken)
     {
-        _commonService.ValidateModelState(ModelState);
-        _authz.EnsureCanEditFamily(User);
+        _iCommonService.ValidateModelState(ModelState);
+        _iAccessAuthorizationService.EnsureCanEditFamily(User);
 
-        var data = await _memories.CreateAsync(
+        var data = await _iMemoriesService.CreateAsync(
             User.GetFamilyId(),
             User.GetUsername(),
             request,
@@ -97,10 +97,10 @@ public class MemoriesController : ControllerBase
         [FromForm] InputUpdateMemoryView request,
         CancellationToken cancellationToken)
     {
-        _commonService.ValidateModelState(ModelState);
-        _authz.EnsureCanEditFamily(User);
+        _iCommonService.ValidateModelState(ModelState);
+        _iAccessAuthorizationService.EnsureCanEditFamily(User);
 
-        var data = await _memories.UpdateAsync(
+        var data = await _iMemoriesService.UpdateAsync(
             User.GetFamilyId(),
             route.Id,
             User.GetUsername(),
@@ -122,10 +122,10 @@ public class MemoriesController : ControllerBase
         [FromRoute] InputMemoryRouteRequestView route,
         CancellationToken cancellationToken)
     {
-        _commonService.ValidateModelState(ModelState);
-        _authz.EnsureCanEditFamily(User);
+        _iCommonService.ValidateModelState(ModelState);
+        _iAccessAuthorizationService.EnsureCanEditFamily(User);
 
-        await _memories.DeleteAsync(
+        await _iMemoriesService.DeleteAsync(
             User.GetFamilyId(),
             route.Id,
             User.GetUsername(),
@@ -149,10 +149,10 @@ public class MemoriesController : ControllerBase
         [FromForm] InputUploadMemoryImageView request,
         CancellationToken cancellationToken)
     {
-        _commonService.ValidateModelState(ModelState);
-        _authz.EnsureCanEditFamily(User);
+        _iCommonService.ValidateModelState(ModelState);
+        _iAccessAuthorizationService.EnsureCanEditFamily(User);
 
-        var data = await _memories.UploadImageAsync(
+        var data = await _iMemoriesService.UploadImageAsync(
             User.GetFamilyId(),
             route.Id,
             User.GetUsername(),
@@ -174,10 +174,10 @@ public class MemoriesController : ControllerBase
         [FromRoute] InputMemoryImageDeleteRouteRequestView route,
         CancellationToken cancellationToken)
     {
-        _commonService.ValidateModelState(ModelState);
-        _authz.EnsureCanEditFamily(User);
+        _iCommonService.ValidateModelState(ModelState);
+        _iAccessAuthorizationService.EnsureCanEditFamily(User);
 
-        var data = await _memories.DeleteImageAsync(
+        var data = await _iMemoriesService.DeleteImageAsync(
             User.GetFamilyId(),
             route.Id,
             route.ImageId,
@@ -199,10 +199,10 @@ public class MemoriesController : ControllerBase
         [FromRoute] InputMemoryImageRouteRequestView route,
         [FromBody] InputSetMemoryCoverView request)
     {
-        _commonService.ValidateModelState(ModelState);
-        _authz.EnsureCanEditFamily(User);
+        _iCommonService.ValidateModelState(ModelState);
+        _iAccessAuthorizationService.EnsureCanEditFamily(User);
 
-        var data = await _memories.SetCoverAsync(
+        var data = await _iMemoriesService.SetCoverAsync(
             User.GetFamilyId(),
             route.Id,
             request.ImageId,

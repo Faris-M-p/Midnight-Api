@@ -12,11 +12,11 @@ public class EmailTemplateService : IEmailTemplateService
     private const string ExpiryPlaceholder = "#{{EXPIRY_MINUTES}}#";
 
     private readonly string _templatesRoot;
-    private readonly ILogger<EmailTemplateService> _logger;
+    private readonly ILogger<EmailTemplateService> _iLogger;
 
     public EmailTemplateService(IWebHostEnvironment environment, ILogger<EmailTemplateService> logger)
     {
-        _logger = logger;
+        _iLogger = logger;
         _templatesRoot = Path.Combine(environment.ContentRootPath, "Templates");
     }
 
@@ -35,7 +35,7 @@ public class EmailTemplateService : IEmailTemplateService
         var path = Path.Combine(_templatesRoot, fileName);
         if (!File.Exists(path))
         {
-            _logger.LogError("Email template not found at {TemplatePath}", path);
+            _iLogger.LogError("Email template not found at {TemplatePath}", path);
             throw new BadRequestException("Unable to send verification email. Please try again.");
         }
 

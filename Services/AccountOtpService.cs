@@ -16,13 +16,13 @@ public static class OtpPurposes
 
 public class AccountOtpService : IAccountOtpService
 {
-    private readonly IAccountOtpsRepository _otps;
-    private readonly IUserAccountsRepository _accounts;
-    private readonly IEmailService _email;
-    private readonly IEmailTemplateService _templates;
-    private readonly IPasswordService _passwords;
+    private readonly IAccountOtpsRepository _iAccountOtpsRepository;
+    private readonly IUserAccountsRepository _iUserAccountsRepository;
+    private readonly IEmailService _iEmailService;
+    private readonly IEmailTemplateService _iEmailTemplateService;
+    private readonly IPasswordService _iPasswordService;
     private readonly OtpOptions _options;
-    private readonly ICommonService _common;
+    private readonly ICommonService _iCommonService;
 
     public AccountOtpService(
         IAccountOtpsRepository otps,
@@ -33,13 +33,13 @@ public class AccountOtpService : IAccountOtpService
         IOptions<OtpOptions> options,
         ICommonService common)
     {
-        _otps = otps;
-        _accounts = accounts;
-        _email = email;
-        _templates = templates;
-        _passwords = passwords;
+        _iAccountOtpsRepository = otps;
+        _iUserAccountsRepository = accounts;
+        _iEmailService = email;
+        _iEmailTemplateService = templates;
+        _iPasswordService = passwords;
         _options = options.Value;
-        _common = common;
+        _iCommonService = common;
     }
 
     public string MaskEmail(string email)
@@ -67,8 +67,8 @@ public class AccountOtpService : IAccountOtpService
             accountId,
             email,
             OtpPurposes.EmailVerification,
-            _templates.RegistrationSubject,
-            _templates.BuildRegistrationVerificationHtml,
+            _iEmailTemplateService.RegistrationSubject,
+            _iEmailTemplateService.BuildRegistrationVerificationHtml,
             cancellationToken,
             enforceCooldown: false);
     }
@@ -82,8 +82,8 @@ public class AccountOtpService : IAccountOtpService
             accountId,
             email,
             OtpPurposes.ForgotPassword,
-            _templates.ForgotPasswordSubject,
-            _templates.BuildForgotPasswordHtml,
+            _iEmailTemplateService.ForgotPasswordSubject,
+            _iEmailTemplateService.BuildForgotPasswordHtml,
             cancellationToken);
     }
 
@@ -93,7 +93,7 @@ public class AccountOtpService : IAccountOtpService
         string purpose,
         CancellationToken cancellationToken = default)
     {
-        var active = await _otps.GetActiveAsync(new InputGetActiveAccountOtp
+        var active = await _iAccountOtpsRepository.GetActiveAsync(new InputGetActiveAccountOtp
         {
             AccountId = accountId,
             Purpose = purpose
@@ -131,15 +131,15 @@ public class AccountOtpService : IAccountOtpService
 
         await VerifyOtpAsync(account, OtpPurposes.EmailVerification, otp, createResetToken: false);
 
-        var result = await _accounts.SetEmailVerifiedAsync(new InputSetEmailVerified
+        var result = await _iUserAccountsRepository.SetEmailVerifiedAsync(new InputSetEmailVerified
         {
             Id = account.ID_UserAccounts,
             EmailVerified = true,
             UpdatedBy = account.Username
         });
-        _common.EnsureSuccess(result);
+        _iCommonService.EnsureSuccess(result);
 
-        var refreshed = await _accounts.GetByEmailAsync(new InputGetAccountByEmail { Email = email.Trim() })
+        var refreshed = await _iUserAccountsRepository.GetByEmailAsync(new InputGetAccountByEmail { Email = email.Trim() })
             ?? throw new BadRequestException("Unable to complete registration. Please try again.");
 
         if (!refreshed.EmailVerified || !refreshed.IsActive)
@@ -162,7 +162,7 @@ public class AccountOtpService : IAccountOtpService
     {
         var account = await RequireAccountByEmailAsync(email);
         EnsureVerifiedActiveAccount(account);
-        var otpRow = await _otps.GetLatestResetTokenAsync(new InputGetActiveAccountOtp
+        var otpRow = await _iAccountOtpsRepository.GetLatestResetTokenAsync(new InputGetActiveAccountOtp
         {
             AccountId = account.ID_UserAccounts,
             Purpose = OtpPurposes.ForgotPassword
@@ -171,21 +171,21 @@ public class AccountOtpService : IAccountOtpService
         if (string.IsNullOrWhiteSpace(otpRow.ResetTokenHash)
             || otpRow.ResetTokenExpiresOn is null
             || otpRow.ResetTokenExpiresOn <= DateTime.UtcNow
-            || !_passwords.Verify(resetToken.Trim(), otpRow.ResetTokenHash))
+            || !_iPasswordService.Verify(resetToken.Trim(), otpRow.ResetTokenHash))
         {
             throw new BadRequestException("Invalid or expired password reset session. Please request a new code.");
         }
 
-        var update = await _accounts.UpdatePasswordAsync(new InputUpdateAccountPassword
+        var update = await _iUserAccountsRepository.UpdatePasswordAsync(new InputUpdateAccountPassword
         {
             Id = account.ID_UserAccounts,
-            PasswordHash = _passwords.Hash(newPassword),
+            PasswordHash = _iPasswordService.Hash(newPassword),
             UpdatedBy = account.Username
         });
-        _common.EnsureSuccess(update);
+        _iCommonService.EnsureSuccess(update);
 
-        await _otps.ClearResetTokenAsync(new InputAccountOtpById { Id = otpRow.ID_AccountOtps });
-        await _otps.InvalidateAsync(new InputInvalidateAccountOtp
+        await _iAccountOtpsRepository.ClearResetTokenAsync(new InputAccountOtpById { Id = otpRow.ID_AccountOtps });
+        await _iAccountOtpsRepository.InvalidateAsync(new InputInvalidateAccountOtp
         {
             AccountId = account.ID_UserAccounts,
             Purpose = OtpPurposes.ForgotPassword,
@@ -202,7 +202,7 @@ public class AccountOtpService : IAccountOtpService
         CancellationToken cancellationToken,
         bool enforceCooldown = true)
     {
-        var active = await _otps.GetActiveAsync(new InputGetActiveAccountOtp
+        var active = await _iAccountOtpsRepository.GetActiveAsync(new InputGetActiveAccountOtp
         {
             AccountId = accountId,
             Purpose = purpose
@@ -217,7 +217,7 @@ public class AccountOtpService : IAccountOtpService
             }
         }
 
-        await _otps.InvalidateAsync(new InputInvalidateAccountOtp
+        await _iAccountOtpsRepository.InvalidateAsync(new InputInvalidateAccountOtp
         {
             AccountId = accountId,
             Purpose = purpose,
@@ -226,18 +226,18 @@ public class AccountOtpService : IAccountOtpService
 
         var otp = GenerateNumericOtp(_options.Length);
         var expiresOn = DateTime.UtcNow.AddMinutes(Math.Max(1, _options.ExpiryMinutes));
-        var insert = await _otps.InsertAsync(new InputInsertAccountOtp
+        var insert = await _iAccountOtpsRepository.InsertAsync(new InputInsertAccountOtp
         {
             AccountId = accountId,
             Email = email.Trim(),
-            OtpHash = _passwords.Hash(otp),
+            OtpHash = _iPasswordService.Hash(otp),
             Purpose = purpose,
             ExpiresOn = expiresOn,
             MaxAttempts = Math.Max(1, _options.MaxAttempts)
         });
-        _common.EnsureSuccess(insert);
+        _iCommonService.EnsureSuccess(insert);
 
-        await _email.SendHtmlAsync(email.Trim(), subject, htmlFactory(otp, _options.ExpiryMinutes), cancellationToken);
+        await _iEmailService.SendHtmlAsync(email.Trim(), subject, htmlFactory(otp, _options.ExpiryMinutes), cancellationToken);
 
         return new OutputOtpChallenge
         {
@@ -254,7 +254,7 @@ public class AccountOtpService : IAccountOtpService
         string otp,
         bool createResetToken)
     {
-        var active = await _otps.GetActiveAsync(new InputGetActiveAccountOtp
+        var active = await _iAccountOtpsRepository.GetActiveAsync(new InputGetActiveAccountOtp
         {
             AccountId = account.ID_UserAccounts,
             Purpose = purpose
@@ -275,10 +275,10 @@ public class AccountOtpService : IAccountOtpService
             throw new BadRequestException("Too many attempts. Please request a new code.");
         }
 
-        if (!_passwords.Verify(otp.Trim(), active.OtpHash))
+        if (!_iPasswordService.Verify(otp.Trim(), active.OtpHash))
         {
-            await _otps.IncrementAttemptAsync(new InputAccountOtpById { Id = active.ID_AccountOtps });
-            var refreshed = await _otps.GetByIdAsync(new InputAccountOtpById { Id = active.ID_AccountOtps });
+            await _iAccountOtpsRepository.IncrementAttemptAsync(new InputAccountOtpById { Id = active.ID_AccountOtps });
+            var refreshed = await _iAccountOtpsRepository.GetByIdAsync(new InputAccountOtpById { Id = active.ID_AccountOtps });
             if (refreshed is not null && refreshed.AttemptCount >= refreshed.MaxAttempts)
             {
                 throw new BadRequestException("Too many attempts. Please request a new code.");
@@ -293,24 +293,24 @@ public class AccountOtpService : IAccountOtpService
         if (createResetToken)
         {
             resetToken = GenerateResetToken();
-            resetHash = _passwords.Hash(resetToken);
+            resetHash = _iPasswordService.Hash(resetToken);
             resetExpires = DateTime.UtcNow.AddMinutes(Math.Max(1, _options.PasswordResetTokenMinutes));
         }
 
-        var marked = await _otps.MarkUsedAsync(new InputMarkAccountOtpUsed
+        var marked = await _iAccountOtpsRepository.MarkUsedAsync(new InputMarkAccountOtpUsed
         {
             Id = active.ID_AccountOtps,
             ResetTokenHash = resetHash,
             ResetTokenExpiresOn = resetExpires
         });
-        _common.EnsureSuccess(marked);
+        _iCommonService.EnsureSuccess(marked);
 
         return (active, resetToken);
     }
 
     private async Task<OutputLoginAccount> RequireAccountByEmailAsync(string email)
     {
-        return await _accounts.GetByEmailAsync(new InputGetAccountByEmail { Email = email.Trim() })
+        return await _iUserAccountsRepository.GetByEmailAsync(new InputGetAccountByEmail { Email = email.Trim() })
             ?? throw new BadRequestException("Invalid verification code.");
     }
 

@@ -12,6 +12,8 @@
 \i 01_Tables/MemberSocialLinks.sql
 \i 01_Tables/Memories.sql
 \i 01_Tables/MemoryImages.sql
+\i 01_Tables/Events.sql
+\i 01_Tables/EventMembers.sql
 \i 01_Tables/UserAccounts.sql
 
 \echo '=== 02_Functions ==='
@@ -73,6 +75,12 @@
 \i 07_Procedures/Memory/ProMemoryImageGet.sql
 \i 07_Procedures/Memory/ProMemoryImageDelete.sql
 \i 07_Procedures/Memory/ProMemoryCoverSet.sql
+
+\i 07_Procedures/Event/ProEventList.sql
+\i 07_Procedures/Event/ProEventSelect.sql
+\i 07_Procedures/Event/ProEventInsert.sql
+\i 07_Procedures/Event/ProEventUpdate.sql
+\i 07_Procedures/Event/ProEventDelete.sql
 
 \echo '=== 08_SeedData ==='
 \i 08_SeedData/DefaultSettings.sql

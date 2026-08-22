@@ -9,4 +9,5 @@ public interface IFamiliesRepository
     Task<OutputCreateFamily> CreateAsync(InputCreateFamily input);
     Task<OutputUpdateFamily> UpdateAsync(InputUpdateFamily input);
     Task<OutputUpdateFamily> UpdateCoverAsync(InputUpdateFamilyCover input);
+    Task<OutputFamilyStorageSums?> GetStorageSumsAsync(InputFamilyStorage input);
 }

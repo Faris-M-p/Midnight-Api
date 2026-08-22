@@ -14,12 +14,12 @@ namespace MidnightApi.Controllers;
 [Tags("Accounts")]
 public class AccountController : ControllerBase
 {
-    private readonly IUserAccountsRepository _accounts;
-    private readonly IFamiliesRepository _families;
-    private readonly IPasswordService _passwords;
-    private readonly IJwtTokenService _jwt;
-    private readonly ICommonService _commonService;
-    private readonly IAccountOtpService _otpService;
+    private readonly IUserAccountsRepository _iUserAccountsRepository;
+    private readonly IFamiliesRepository _iFamiliesRepository;
+    private readonly IPasswordService _iPasswordService;
+    private readonly IJwtTokenService _iJwtTokenService;
+    private readonly ICommonService _iCommonService;
+    private readonly IAccountOtpService _iAccountOtpService;
 
     public AccountController(
         IUserAccountsRepository accounts,
@@ -29,12 +29,12 @@ public class AccountController : ControllerBase
         ICommonService commonService,
         IAccountOtpService otpService)
     {
-        _accounts = accounts;
-        _families = families;
-        _passwords = passwords;
-        _jwt = jwt;
-        _commonService = commonService;
-        _otpService = otpService;
+        _iUserAccountsRepository = accounts;
+        _iFamiliesRepository = families;
+        _iPasswordService = passwords;
+        _iJwtTokenService = jwt;
+        _iCommonService = commonService;
+        _iAccountOtpService = otpService;
     }
 
     [HttpPost("register")]
@@ -43,14 +43,14 @@ public class AccountController : ControllerBase
         [FromBody] InputRegisterAccountView request,
         CancellationToken cancellationToken)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
         var email = request.Email.Trim();
         var familyName = request.FamilyName.Trim();
-        var passwordHash = _passwords.Hash(request.Password);
+        var passwordHash = _iPasswordService.Hash(request.Password);
         var username = ResolveUsernameFromEmail(email);
 
-        var existing = await _accounts.GetByEmailAsync(new InputGetAccountByEmail { Email = email });
+        var existing = await _iUserAccountsRepository.GetByEmailAsync(new InputGetAccountByEmail { Email = email });
         long accountId;
         long? familyId;
 
@@ -62,7 +62,7 @@ public class AccountController : ControllerBase
             }
 
             // Abandoned / unverified registration: reuse the same account (never duplicate email).
-            var refresh = await _accounts.UpdateAsync(new InputUpdateAccount
+            var refresh = await _iUserAccountsRepository.UpdateAsync(new InputUpdateAccount
             {
                 Id = existing.ID_UserAccounts,
                 Username = existing.Username,
@@ -70,12 +70,12 @@ public class AccountController : ControllerBase
                 PasswordHash = passwordHash,
                 UpdatedBy = existing.Username
             });
-            _commonService.EnsureSuccess(refresh);
+            _iCommonService.EnsureSuccess(refresh);
 
-            var family = await _families.GetByIdAsync(new InputGetFamily { Id = existing.FK_Families });
+            var family = await _iFamiliesRepository.GetByIdAsync(new InputGetFamily { Id = existing.FK_Families });
             if (family is not null)
             {
-                var familyUpdate = await _families.UpdateAsync(new InputUpdateFamily
+                var familyUpdate = await _iFamiliesRepository.UpdateAsync(new InputUpdateFamily
                 {
                     Id = family.ID_Families,
                     FamilyName = familyName,
@@ -83,7 +83,7 @@ public class AccountController : ControllerBase
                     PhotoUrl = family.PhotoUrl,
                     UpdatedBy = existing.Username
                 });
-                _commonService.EnsureSuccess(familyUpdate);
+                _iCommonService.EnsureSuccess(familyUpdate);
             }
 
             accountId = existing.ID_UserAccounts;
@@ -91,7 +91,7 @@ public class AccountController : ControllerBase
         }
         else
         {
-            var result = await _accounts.RegisterAsync(new InputRegisterAccount
+            var result = await _iUserAccountsRepository.RegisterAsync(new InputRegisterAccount
             {
                 FamilyName = familyName,
                 Description = null,
@@ -101,16 +101,16 @@ public class AccountController : ControllerBase
                 CreatedBy = username
             });
 
-            _commonService.EnsureSuccess(result);
+            _iCommonService.EnsureSuccess(result);
 
-            var account = await _accounts.GetByIdAsync(new InputGetAccount { Id = result.ResponseCode })
+            var account = await _iUserAccountsRepository.GetByIdAsync(new InputGetAccount { Id = result.ResponseCode })
                 ?? throw new BadRequestException("Account was created but could not be loaded.");
 
             accountId = account.ID_UserAccounts;
             familyId = account.FK_Families;
         }
 
-        var challenge = await _otpService.IssueEmailVerificationOtpAsync(accountId, email, cancellationToken);
+        var challenge = await _iAccountOtpService.IssueEmailVerificationOtpAsync(accountId, email, cancellationToken);
 
         return Ok(new ApiResponse<OutputRegisterAccount>
         {
@@ -134,12 +134,12 @@ public class AccountController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> VerifyEmail([FromBody] InputVerifyEmailView request)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
         // OTP → EmailVerified=true (committed) → only then issue JWT.
-        var account = await _otpService.VerifyEmailVerificationOtpAsync(request.Email, request.Otp);
+        var account = await _iAccountOtpService.VerifyEmailVerificationOtpAsync(request.Email, request.Otp);
 
-        var (token, expiresAt) = _jwt.CreateAdminToken(
+        var (token, expiresAt) = _iJwtTokenService.CreateAdminToken(
             account.ID_UserAccounts,
             account.FK_Families,
             account.Username);
@@ -156,7 +156,7 @@ public class AccountController : ControllerBase
                 RequiresEmailVerification = false,
                 Username = account.Username,
                 Email = account.Email,
-                MaskedEmail = _otpService.MaskEmail(account.Email)
+                MaskedEmail = _iAccountOtpService.MaskEmail(account.Email)
             },
             TraceId = HttpContext.TraceIdentifier
         });
@@ -168,9 +168,9 @@ public class AccountController : ControllerBase
         [FromBody] InputResendVerificationView request,
         CancellationToken cancellationToken)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
-        var account = await _accounts.GetByEmailAsync(new InputGetAccountByEmail
+        var account = await _iUserAccountsRepository.GetByEmailAsync(new InputGetAccountByEmail
         {
             Email = request.Email.Trim()
         });
@@ -190,14 +190,14 @@ public class AccountController : ControllerBase
                 Data = new OutputOtpChallenge
                 {
                     Email = account.Email,
-                    MaskedEmail = _otpService.MaskEmail(account.Email),
+                    MaskedEmail = _iAccountOtpService.MaskEmail(account.Email),
                     ResendAvailableInSeconds = 0
                 },
                 TraceId = HttpContext.TraceIdentifier
             });
         }
 
-        var challenge = await _otpService.ResendAsync(
+        var challenge = await _iAccountOtpService.ResendAsync(
             account.ID_UserAccounts,
             account.Email,
             OtpPurposes.EmailVerification,
@@ -219,14 +219,14 @@ public class AccountController : ControllerBase
         [FromBody] InputLoginView request,
         CancellationToken cancellationToken)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
-        var account = await _accounts.GetByEmailAsync(new InputGetAccountByEmail
+        var account = await _iUserAccountsRepository.GetByEmailAsync(new InputGetAccountByEmail
         {
             Email = request.Email.Trim()
         });
 
-        if (account is null || !_passwords.Verify(request.Password, account.PasswordHash))
+        if (account is null || !_iPasswordService.Verify(request.Password, account.PasswordHash))
         {
             throw new UnauthorizedAccessException("Invalid email or password.");
         }
@@ -235,7 +235,7 @@ public class AccountController : ControllerBase
         {
             try
             {
-                await _otpService.IssueEmailVerificationOtpAsync(
+                await _iAccountOtpService.IssueEmailVerificationOtpAsync(
                     account.ID_UserAccounts,
                     account.Email,
                     cancellationToken);
@@ -255,13 +255,13 @@ public class AccountController : ControllerBase
                     RequiresEmailVerification = true,
                     Username = account.Username,
                     Email = account.Email,
-                    MaskedEmail = _otpService.MaskEmail(account.Email)
+                    MaskedEmail = _iAccountOtpService.MaskEmail(account.Email)
                 },
                 TraceId = HttpContext.TraceIdentifier
             });
         }
 
-        var (token, expiresAt) = _jwt.CreateAdminToken(
+        var (token, expiresAt) = _iJwtTokenService.CreateAdminToken(
             account.ID_UserAccounts,
             account.FK_Families,
             account.Username);
@@ -278,7 +278,7 @@ public class AccountController : ControllerBase
                 RequiresEmailVerification = false,
                 Username = account.Username,
                 Email = account.Email,
-                MaskedEmail = _otpService.MaskEmail(account.Email)
+                MaskedEmail = _iAccountOtpService.MaskEmail(account.Email)
             },
             TraceId = HttpContext.TraceIdentifier
         });
@@ -290,9 +290,9 @@ public class AccountController : ControllerBase
         [FromBody] InputForgotPasswordView request,
         CancellationToken cancellationToken)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
-        var account = await _accounts.GetByEmailAsync(new InputGetAccountByEmail
+        var account = await _iUserAccountsRepository.GetByEmailAsync(new InputGetAccountByEmail
         {
             Email = request.Email.Trim()
         });
@@ -301,7 +301,7 @@ public class AccountController : ControllerBase
         {
             try
             {
-                await _otpService.IssueForgotPasswordOtpAsync(
+                await _iAccountOtpService.IssueForgotPasswordOtpAsync(
                     account.ID_UserAccounts,
                     account.Email,
                     cancellationToken);
@@ -326,9 +326,9 @@ public class AccountController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> VerifyForgotPasswordOtp([FromBody] InputVerifyForgotPasswordOtpView request)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
-        var resetToken = await _otpService.VerifyForgotPasswordOtpAsync(request.Email, request.Otp);
+        var resetToken = await _iAccountOtpService.VerifyForgotPasswordOtpAsync(request.Email, request.Otp);
 
         return Ok(new ApiResponse<OutputForgotPasswordOtpVerified>
         {
@@ -338,7 +338,7 @@ public class AccountController : ControllerBase
             Data = new OutputForgotPasswordOtpVerified
             {
                 Email = request.Email.Trim(),
-                MaskedEmail = _otpService.MaskEmail(request.Email),
+                MaskedEmail = _iAccountOtpService.MaskEmail(request.Email),
                 ResetToken = resetToken
             },
             TraceId = HttpContext.TraceIdentifier
@@ -349,7 +349,7 @@ public class AccountController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> ResetPassword([FromBody] InputResetPasswordView request)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
         if (!string.Equals(request.NewPassword, request.ConfirmPassword, StringComparison.Ordinal))
         {
@@ -362,7 +362,7 @@ public class AccountController : ControllerBase
                 "Password must include upper/lowercase letters, a number, a symbol, and be at least 8 characters.");
         }
 
-        await _otpService.ResetPasswordAsync(request.Email, request.ResetToken, request.NewPassword);
+        await _iAccountOtpService.ResetPasswordAsync(request.Email, request.ResetToken, request.NewPassword);
 
         return Ok(new ApiResponse<object?>
         {
@@ -378,13 +378,13 @@ public class AccountController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetMe()
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
         if (User.IsAccessTokenUser())
         {
             throw new ForbiddenException();
         }
 
-        var account = await _accounts.GetByIdAsync(new InputGetAccount { Id = User.GetAccountId() })
+        var account = await _iUserAccountsRepository.GetByIdAsync(new InputGetAccount { Id = User.GetAccountId() })
             ?? throw new NotFoundException("Account not found.");
 
         return Ok(new ApiResponse<OutputGetAccount>
@@ -401,22 +401,22 @@ public class AccountController : ControllerBase
     [Authorize]
     public async Task<IActionResult> UpdateMe([FromBody] InputUpdateAccountView request)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
         if (User.IsAccessTokenUser())
         {
             throw new ForbiddenException();
         }
 
-        var result = await _accounts.UpdateAsync(new InputUpdateAccount
+        var result = await _iUserAccountsRepository.UpdateAsync(new InputUpdateAccount
         {
             Id = User.GetAccountId(),
             Username = request.Username.Trim(),
             Email = request.Email.Trim(),
-            PasswordHash = string.IsNullOrWhiteSpace(request.Password) ? null : _passwords.Hash(request.Password),
+            PasswordHash = string.IsNullOrWhiteSpace(request.Password) ? null : _iPasswordService.Hash(request.Password),
             UpdatedBy = User.GetUsername()
         });
 
-        return _commonService.ToActionResult(result, HttpContext.TraceIdentifier);
+        return _iCommonService.ToActionResult(result, HttpContext.TraceIdentifier);
     }
 
     private static bool IsStrongPassword(string password) =>

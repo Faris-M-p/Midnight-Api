@@ -1,36 +1,32 @@
 using Microsoft.Extensions.Options;
-using MidnightApi.Data;
-using MidnightApi.DataAccess.Interfaces;
 using MidnightApi.Exceptions;
 using MidnightApi.Models;
 using MidnightApi.Options;
+using MidnightApi.Repositories.Interfaces;
 using MidnightApi.Services.Interfaces;
 
 namespace MidnightApi.Services;
 
+/// <summary>
+/// Storage quota helper. DB access goes through FamiliesRepository → ProFamilyStorageSelect.
+/// </summary>
 public class FamilyStorageService : IFamilyStorageService
 {
-    private readonly IDataAccessDapper _dataAccess;
+    private readonly IFamiliesRepository _iFamiliesRepository;
     private readonly StorageOptions _options;
 
     public FamilyStorageService(
-        IDataAccessDapper dataAccess,
+        IFamiliesRepository families,
         IOptions<StorageOptions> options)
     {
-        _dataAccess = dataAccess;
+        _iFamiliesRepository = families;
         _options = options.Value;
     }
 
     public async Task<OutputFamilyStorageUsage> GetStorageUsageAsync(long familyId)
     {
-        var sums = await _dataAccess.GetPayloadByStoredProcedureAsync<OutputFamilyStorageSums>(
-            StoredProcedures.FamilyStorageSelect,
-            new InputFamilyStorage { FamilyId = familyId });
-
-        if (sums is null)
-        {
-            throw new NotFoundException("Family not found.");
-        }
+        var sums = await _iFamiliesRepository.GetStorageSumsAsync(new InputFamilyStorage { FamilyId = familyId })
+            ?? throw new NotFoundException("Family not found.");
 
         return BuildUsage(sums);
     }

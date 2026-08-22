@@ -7,42 +7,42 @@ namespace MidnightApi.Repositories;
 
 public class AccountOtpsRepository : IAccountOtpsRepository
 {
-    private readonly IDataAccessDapper _dataAccessDapper;
+    private readonly IDataAccessDapper _iDataAccessDapper;
 
     public AccountOtpsRepository(IDataAccessDapper dataAccessDapper)
     {
-        _dataAccessDapper = dataAccessDapper;
+        _iDataAccessDapper = dataAccessDapper;
     }
 
     public Task<OutputAccountOtpWrite> InsertAsync(InputInsertAccountOtp input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputAccountOtpWrite>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputAccountOtpWrite>(
             StoredProcedures.AccountOtpInsert, input);
 
     public Task<OutputAccountOtpWrite> InvalidateAsync(InputInvalidateAccountOtp input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputAccountOtpWrite>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputAccountOtpWrite>(
             StoredProcedures.AccountOtpInvalidate, input);
 
     public Task<OutputAccountOtp?> GetActiveAsync(InputGetActiveAccountOtp input) =>
-        _dataAccessDapper.GetSingleOrDefaultByStoredProcedureAsync<OutputAccountOtp>(
+        _iDataAccessDapper.GetSingleOrDefaultByStoredProcedureAsync<OutputAccountOtp>(
             StoredProcedures.AccountOtpSelectActive, input);
 
     public Task<OutputAccountOtp?> GetByIdAsync(InputAccountOtpById input) =>
-        _dataAccessDapper.GetSingleOrDefaultByStoredProcedureAsync<OutputAccountOtp>(
+        _iDataAccessDapper.GetSingleOrDefaultByStoredProcedureAsync<OutputAccountOtp>(
             StoredProcedures.AccountOtpSelectById, input);
 
     public Task<OutputAccountOtpWrite> IncrementAttemptAsync(InputAccountOtpById input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputAccountOtpWrite>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputAccountOtpWrite>(
             StoredProcedures.AccountOtpIncrementAttempt, input);
 
     public Task<OutputAccountOtpWrite> MarkUsedAsync(InputMarkAccountOtpUsed input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputAccountOtpWrite>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputAccountOtpWrite>(
             StoredProcedures.AccountOtpMarkUsed, input);
 
     public Task<OutputAccountOtp?> GetLatestResetTokenAsync(InputGetActiveAccountOtp input) =>
-        _dataAccessDapper.GetSingleOrDefaultByStoredProcedureAsync<OutputAccountOtp>(
+        _iDataAccessDapper.GetSingleOrDefaultByStoredProcedureAsync<OutputAccountOtp>(
             StoredProcedures.AccountOtpSelectByResetToken, input);
 
     public Task<OutputAccountOtpWrite> ClearResetTokenAsync(InputAccountOtpById input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputAccountOtpWrite>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputAccountOtpWrite>(
             StoredProcedures.AccountOtpClearResetToken, input);
 }

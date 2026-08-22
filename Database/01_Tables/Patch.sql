@@ -11,4 +11,6 @@
 -- \ir AccessTokens.sql
 \ir Memories.sql
 \ir MemoryImages.sql
+\ir Events.sql
+\ir EventMembers.sql
 \ir DropLegacyMemoryMedia.sql

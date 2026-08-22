@@ -46,6 +46,7 @@ builder.Services.AddScoped<IAccountOtpsRepository, AccountOtpsRepository>();
 builder.Services.AddScoped<IAccessTokensRepository, AccessTokensRepository>();
 builder.Services.AddScoped<IMemoriesRepository, MemoriesRepository>();
 builder.Services.AddScoped<IMemoriesService, MemoriesService>();
+builder.Services.AddScoped<IEventsRepository, EventsRepository>();
 builder.Services.AddScoped<IFamilyStorageService, FamilyStorageService>();
 builder.Services.AddScoped<IAccessAuthorizationService, AccessAuthorizationService>();
 builder.Services.AddScoped<IAccountOtpService, AccountOtpService>();

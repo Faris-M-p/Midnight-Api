@@ -9,7 +9,7 @@ public class InputFamilyStorage
 }
 
 /// <summary>
-/// Raw SUM payload from ProFamilyStorageSelect (limit applied in service).
+/// Raw SUM payload from ProFamilyStorageSelect (limit applied in FamilyStorageService).
 /// </summary>
 public class OutputFamilyStorageSums
 {

@@ -57,4 +57,10 @@ public static class StoredProcedures
     public const string MemoryImageGet = "ProMemoryImageGet";
     public const string MemoryImageDelete = "ProMemoryImageDelete";
     public const string MemoryCoverSet = "ProMemoryCoverSet";
+
+    public const string EventList = "ProEventList";
+    public const string EventSelect = "ProEventSelect";
+    public const string EventInsert = "ProEventInsert";
+    public const string EventUpdate = "ProEventUpdate";
+    public const string EventDelete = "ProEventDelete";
 }

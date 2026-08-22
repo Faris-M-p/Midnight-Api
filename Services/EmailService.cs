@@ -10,12 +10,12 @@ namespace MidnightApi.Services;
 public class EmailService : IEmailService
 {
     private readonly SmtpOptions _options;
-    private readonly ILogger<EmailService> _logger;
+    private readonly ILogger<EmailService> _iLogger;
 
     public EmailService(IOptions<SmtpOptions> options, ILogger<EmailService> logger)
     {
         _options = options.Value;
-        _logger = logger;
+        _iLogger = logger;
     }
 
     public async Task SendHtmlAsync(
@@ -29,7 +29,7 @@ public class EmailService : IEmailService
             || string.IsNullOrWhiteSpace(_options.Password)
             || string.IsNullOrWhiteSpace(_options.FromEmail))
         {
-            _logger.LogError("SMTP is not configured.");
+            _iLogger.LogError("SMTP is not configured.");
             throw new BadRequestException("Unable to send verification email. Please try again.");
         }
 
@@ -60,7 +60,7 @@ public class EmailService : IEmailService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send email to {EmailDomain}", MaskEmailDomain(toEmail));
+            _iLogger.LogError(ex, "Failed to send email to {EmailDomain}", MaskEmailDomain(toEmail));
             throw new BadRequestException("Unable to send verification email. Please try again.");
         }
     }

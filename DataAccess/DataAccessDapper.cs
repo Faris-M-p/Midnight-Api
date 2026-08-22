@@ -25,9 +25,9 @@ public sealed class DataAccessDapper : IDataAccessDapper
     };
 
     private readonly string _connectionString;
-    private readonly ILogger<DataAccessDapper> _logger;
+    private readonly ILogger<DataAccessDapper> _iLogger;
     private readonly DatabaseTraceWriter _trace;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IHttpContextAccessor _iHttpContextAccessor;
 
     public DataAccessDapper(
         IConfiguration configuration,
@@ -37,9 +37,9 @@ public sealed class DataAccessDapper : IDataAccessDapper
     {
         _connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("DefaultConnection is missing in appsettings.");
-        _logger = logger;
+        _iLogger = logger;
         _trace = trace;
-        _httpContextAccessor = httpContextAccessor;
+        _iHttpContextAccessor = httpContextAccessor;
     }
 
     public async Task<List<TResult>> GetListByStoredProcedureAsync<TResult>(string storedProcedureName, object? parameter = null)
@@ -93,7 +93,7 @@ public sealed class DataAccessDapper : IDataAccessDapper
     private async Task<TResult> CallWriteAsync<TResult>(string storedProcedureName, object? parameter)
     {
         var extras = CallModeExtra.ForWrite();
-        var entry = _trace.TryBegin(storedProcedureName, parameter, extras, fetchCursorName: null, _httpContextAccessor.HttpContext);
+        var entry = _trace.TryBegin(storedProcedureName, parameter, extras, fetchCursorName: null, _iHttpContextAccessor.HttpContext);
         var sw = Stopwatch.StartNew();
 
         try
@@ -111,7 +111,7 @@ public sealed class DataAccessDapper : IDataAccessDapper
         catch (Exception ex)
         {
             _trace.TryComplete(entry, sw, success: false, ex);
-            _logger.LogError(ex, "Stored procedure command failed.");
+            _iLogger.LogError(ex, "Stored procedure command failed.");
             throw;
         }
     }
@@ -119,7 +119,7 @@ public sealed class DataAccessDapper : IDataAccessDapper
     private async Task<object?> CallJsonDataAsync(string storedProcedureName, object? parameter)
     {
         var extras = CallModeExtra.ForJsonData();
-        var entry = _trace.TryBegin(storedProcedureName, parameter, extras, fetchCursorName: null, _httpContextAccessor.HttpContext);
+        var entry = _trace.TryBegin(storedProcedureName, parameter, extras, fetchCursorName: null, _iHttpContextAccessor.HttpContext);
         var sw = Stopwatch.StartNew();
 
         try
@@ -135,7 +135,7 @@ public sealed class DataAccessDapper : IDataAccessDapper
         catch (Exception ex)
         {
             _trace.TryComplete(entry, sw, success: false, ex);
-            _logger.LogError(ex, "Stored procedure command failed.");
+            _iLogger.LogError(ex, "Stored procedure command failed.");
             throw;
         }
     }
@@ -149,7 +149,7 @@ public sealed class DataAccessDapper : IDataAccessDapper
         var extras = includeTotalCount
             ? CallModeExtra.ForPagedCursor(cursorName)
             : CallModeExtra.ForCursor(cursorName);
-        var entry = _trace.TryBegin(storedProcedureName, parameter, extras, fetchCursorName: cursorName, _httpContextAccessor.HttpContext);
+        var entry = _trace.TryBegin(storedProcedureName, parameter, extras, fetchCursorName: cursorName, _iHttpContextAccessor.HttpContext);
         var sw = Stopwatch.StartNew();
 
         try
@@ -183,7 +183,7 @@ public sealed class DataAccessDapper : IDataAccessDapper
         catch (Exception ex)
         {
             _trace.TryComplete(entry, sw, success: false, ex);
-            _logger.LogError(ex, "Stored procedure command failed.");
+            _iLogger.LogError(ex, "Stored procedure command failed.");
             throw;
         }
     }

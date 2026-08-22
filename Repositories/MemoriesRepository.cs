@@ -7,16 +7,16 @@ namespace MidnightApi.Repositories;
 
 public class MemoriesRepository : IMemoriesRepository
 {
-    private readonly IDataAccessDapper _dataAccessDapper;
+    private readonly IDataAccessDapper _iDataAccessDapper;
 
     public MemoriesRepository(IDataAccessDapper dataAccessDapper)
     {
-        _dataAccessDapper = dataAccessDapper;
+        _iDataAccessDapper = dataAccessDapper;
     }
 
     public async Task<OutputPagedMemories?> GetListAsync(InputMemoryList input)
     {
-        var (items, totalCount) = await _dataAccessDapper.GetPagedListByStoredProcedureAsync<OutputMemoryListItem>(
+        var (items, totalCount) = await _iDataAccessDapper.GetPagedListByStoredProcedureAsync<OutputMemoryListItem>(
             StoredProcedures.MemoryList, input);
 
         var page = Math.Max(input.Page, 1);
@@ -33,38 +33,38 @@ public class MemoriesRepository : IMemoriesRepository
     }
 
     public Task<OutputGetMemory?> GetByIdAsync(InputGetMemory input) =>
-        _dataAccessDapper.GetPayloadByStoredProcedureAsync<OutputGetMemory>(
+        _iDataAccessDapper.GetPayloadByStoredProcedureAsync<OutputGetMemory>(
             StoredProcedures.MemorySelect, input);
 
     public Task<OutputCreateMemory> CreateAsync(InputCreateMemory input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputCreateMemory>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputCreateMemory>(
             StoredProcedures.MemoryInsert, input);
 
     public Task<OutputUpdateMemory> UpdateAsync(InputUpdateMemory input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputUpdateMemory>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputUpdateMemory>(
             StoredProcedures.MemoryUpdate, input);
 
     public Task<OutputDeleteMemory> SoftDeleteAsync(InputDeleteMemory input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputDeleteMemory>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputDeleteMemory>(
             StoredProcedures.MemoryDelete, input);
 
     public Task<OutputMemoryImageUploadContext?> GetImageUploadContextAsync(InputMemoryImageUploadContext input) =>
-        _dataAccessDapper.GetPayloadByStoredProcedureAsync<OutputMemoryImageUploadContext>(
+        _iDataAccessDapper.GetPayloadByStoredProcedureAsync<OutputMemoryImageUploadContext>(
             StoredProcedures.MemoryImageUploadContext, input);
 
     public Task<OutputMemoryImageCommit> CommitImageAsync(InputMemoryImageCommit input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputMemoryImageCommit>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputMemoryImageCommit>(
             StoredProcedures.MemoryImageCommit, input);
 
     public Task<OutputMemoryImageDetail?> GetImageAsync(InputMemoryImageGet input) =>
-        _dataAccessDapper.GetPayloadByStoredProcedureAsync<OutputMemoryImageDetail>(
+        _iDataAccessDapper.GetPayloadByStoredProcedureAsync<OutputMemoryImageDetail>(
             StoredProcedures.MemoryImageGet, input);
 
     public Task<OutputMemoryImageDelete> SoftDeleteImageAsync(InputMemoryImageDelete input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputMemoryImageDelete>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputMemoryImageDelete>(
             StoredProcedures.MemoryImageDelete, input);
 
     public Task<OutputMemoryCoverSet> SetCoverAsync(InputMemoryCoverSet input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputMemoryCoverSet>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputMemoryCoverSet>(
             StoredProcedures.MemoryCoverSet, input);
 }

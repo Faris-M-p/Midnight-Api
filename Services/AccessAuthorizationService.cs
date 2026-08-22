@@ -13,11 +13,11 @@ namespace MidnightApi.Services;
 /// </summary>
 public class AccessAuthorizationService : IAccessAuthorizationService
 {
-    private readonly IMembersRepository _members;
+    private readonly IMembersRepository _iMembersRepository;
 
     public AccessAuthorizationService(IMembersRepository members)
     {
-        _members = members;
+        _iMembersRepository = members;
     }
 
     public void EnsureFamilyMatches(ClaimsPrincipal user, long familyId)
@@ -194,7 +194,7 @@ public class AccessAuthorizationService : IAccessAuthorizationService
     }
 
     private Task<bool> IsInScopeBranchAsync(long familyId, long rootMemberId, long candidateMemberId) =>
-        _members.IsInScopeBranchAsync(new InputMemberScopeCheck
+        _iMembersRepository.IsInScopeBranchAsync(new InputMemberScopeCheck
         {
             FamilyId = familyId,
             RootMemberId = rootMemberId,

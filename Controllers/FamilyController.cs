@@ -14,11 +14,11 @@ namespace MidnightApi.Controllers;
 [Authorize]
 public class FamilyController : ControllerBase
 {
-    private readonly IFamiliesRepository _families;
-    private readonly IMembersRepository _members;
-    private readonly ICommonService _commonService;
-    private readonly IImageFileService _images;
-    private readonly IAccessAuthorizationService _authz;
+    private readonly IFamiliesRepository _iFamiliesRepository;
+    private readonly IMembersRepository _iMembersRepository;
+    private readonly ICommonService _iCommonService;
+    private readonly IImageFileService _iImageFileService;
+    private readonly IAccessAuthorizationService _iAccessAuthorizationService;
 
     public FamilyController(
         IFamiliesRepository families,
@@ -27,19 +27,19 @@ public class FamilyController : ControllerBase
         IImageFileService images,
         IAccessAuthorizationService authz)
     {
-        _families = families;
-        _members = members;
-        _commonService = commonService;
-        _images = images;
-        _authz = authz;
+        _iFamiliesRepository = families;
+        _iMembersRepository = members;
+        _iCommonService = commonService;
+        _iImageFileService = images;
+        _iAccessAuthorizationService = authz;
     }
 
     [HttpGet]
     public async Task<IActionResult> Get()
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
-        var family = await _families.GetByIdAsync(new InputGetFamily { Id = User.GetFamilyId() })
+        var family = await _iFamiliesRepository.GetByIdAsync(new InputGetFamily { Id = User.GetFamilyId() })
             ?? throw new NotFoundException("Family not found.");
 
         return Ok(new ApiResponse<OutputGetFamily>
@@ -72,14 +72,14 @@ public class FamilyController : ControllerBase
     [RequestSizeLimit(6 * 1024 * 1024)]
     public async Task<IActionResult> Update([FromForm] InputUpdateFamilyView request, CancellationToken cancellationToken)
     {
-        _commonService.ValidateModelState(ModelState);
-        _authz.EnsureCanEditFamily(User);
+        _iCommonService.ValidateModelState(ModelState);
+        _iAccessAuthorizationService.EnsureCanEditFamily(User);
 
         var familyId = User.GetFamilyId();
         var photoUrl = request.PhotoUrl;
         if (request.FamilyPhoto is { Length: > 0 })
         {
-            var saved = await _images.SaveAsync(
+            var saved = await _iImageFileService.SaveAsync(
                 new ImageUploadRequest
                 {
                     File = request.FamilyPhoto,
@@ -92,10 +92,10 @@ public class FamilyController : ControllerBase
         }
         else if (string.IsNullOrWhiteSpace(photoUrl))
         {
-            photoUrl = (await _families.GetByIdAsync(new InputGetFamily { Id = familyId }))?.PhotoUrl;
+            photoUrl = (await _iFamiliesRepository.GetByIdAsync(new InputGetFamily { Id = familyId }))?.PhotoUrl;
         }
 
-        var result = await _families.UpdateAsync(new InputUpdateFamily
+        var result = await _iFamiliesRepository.UpdateAsync(new InputUpdateFamily
         {
             Id = familyId,
             FamilyName = request.FamilyName.Trim(),
@@ -104,7 +104,7 @@ public class FamilyController : ControllerBase
             UpdatedBy = User.GetUsername()
         });
 
-        return _commonService.ToActionResult(result, HttpContext.TraceIdentifier);
+        return _iCommonService.ToActionResult(result, HttpContext.TraceIdentifier);
     }
 
     [HttpPut("cover")]
@@ -114,8 +114,8 @@ public class FamilyController : ControllerBase
         [FromForm] InputUpdateFamilyCoverView request,
         CancellationToken cancellationToken)
     {
-        _commonService.ValidateModelState(ModelState);
-        _authz.EnsureCanEditFamily(User);
+        _iCommonService.ValidateModelState(ModelState);
+        _iAccessAuthorizationService.EnsureCanEditFamily(User);
 
         if (request.FamilyCover is not { Length: > 0 })
         {
@@ -123,7 +123,7 @@ public class FamilyController : ControllerBase
         }
 
         var familyId = User.GetFamilyId();
-        var saved = await _images.SaveAsync(
+        var saved = await _iImageFileService.SaveAsync(
             new ImageUploadRequest
             {
                 File = request.FamilyCover,
@@ -134,22 +134,22 @@ public class FamilyController : ControllerBase
             cancellationToken);
         var coverUrl = saved.Url;
 
-        var result = await _families.UpdateCoverAsync(new InputUpdateFamilyCover
+        var result = await _iFamiliesRepository.UpdateCoverAsync(new InputUpdateFamilyCover
         {
             Id = familyId,
             CoverUrl = coverUrl,
             UpdatedBy = User.GetUsername()
         });
 
-        return _commonService.ToActionResult(result, HttpContext.TraceIdentifier);
+        return _iCommonService.ToActionResult(result, HttpContext.TraceIdentifier);
     }
 
     [HttpGet("dashboard")]
     public async Task<IActionResult> GetDashboard()
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
-        var data = await _members.GetDashboardAsync(new InputMemberDashboard
+        var data = await _iMembersRepository.GetDashboardAsync(new InputMemberDashboard
         {
             FamilyId = User.GetFamilyId()
         }) ?? throw new NotFoundException("Family not found.");
@@ -167,9 +167,9 @@ public class FamilyController : ControllerBase
     [HttpGet("timeline")]
     public async Task<IActionResult> GetTimeline()
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
-        var data = await _members.GetTimelineAsync(new InputMemberTimeline
+        var data = await _iMembersRepository.GetTimelineAsync(new InputMemberTimeline
         {
             FamilyId = User.GetFamilyId()
         });

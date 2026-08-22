@@ -14,8 +14,8 @@ public class ExceptionHandlingMiddleware
     };
 
     private readonly RequestDelegate _next;
-    private readonly ILogger<ExceptionHandlingMiddleware> _logger;
-    private readonly IHostEnvironment _environment;
+    private readonly ILogger<ExceptionHandlingMiddleware> _iLogger;
+    private readonly IHostEnvironment _iHostEnvironment;
 
     public ExceptionHandlingMiddleware(
         RequestDelegate next,
@@ -23,8 +23,8 @@ public class ExceptionHandlingMiddleware
         IHostEnvironment environment)
     {
         _next = next;
-        _logger = logger;
-        _environment = environment;
+        _iLogger = logger;
+        _iHostEnvironment = environment;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -46,11 +46,11 @@ public class ExceptionHandlingMiddleware
 
         if (statusCode >= StatusCodes.Status500InternalServerError)
         {
-            _logger.LogError(exception, "Unhandled exception for {Method} {Path}", context.Request.Method, context.Request.Path);
+            _iLogger.LogError(exception, "Unhandled exception for {Method} {Path}", context.Request.Method, context.Request.Path);
         }
         else
         {
-            _logger.LogWarning(exception, "Request failed with {StatusCode} for {Method} {Path}", statusCode, context.Request.Method, context.Request.Path);
+            _iLogger.LogWarning(exception, "Request failed with {StatusCode} for {Method} {Path}", statusCode, context.Request.Method, context.Request.Path);
         }
 
         var errors = new List<ApiError>
@@ -62,7 +62,7 @@ public class ExceptionHandlingMiddleware
             }
         };
 
-        if (_environment.IsDevelopment() && statusCode >= StatusCodes.Status500InternalServerError)
+        if (_iHostEnvironment.IsDevelopment() && statusCode >= StatusCodes.Status500InternalServerError)
         {
             errors.Add(new ApiError
             {
@@ -102,7 +102,7 @@ public class ExceptionHandlingMiddleware
 
     private string ResolveDeveloperMessage(Exception exception)
     {
-        if (!_environment.IsDevelopment())
+        if (!_iHostEnvironment.IsDevelopment())
         {
             return string.Empty;
         }

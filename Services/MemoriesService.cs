@@ -16,11 +16,11 @@ public class MemoriesService : IMemoriesService
         "title"
     };
 
-    private readonly IMemoriesRepository _memories;
-    private readonly IFileStorageService _files;
-    private readonly ICommonService _common;
-    private readonly IFamilyStorageService _storage;
-    private readonly ILogger<MemoriesService> _logger;
+    private readonly IMemoriesRepository _iMemoriesRepository;
+    private readonly IFileStorageService _iFileStorageService;
+    private readonly ICommonService _iCommonService;
+    private readonly IFamilyStorageService _iFamilyStorageService;
+    private readonly ILogger<MemoriesService> _iLogger;
 
     public MemoriesService(
         IMemoriesRepository memories,
@@ -29,11 +29,11 @@ public class MemoriesService : IMemoriesService
         IFamilyStorageService storage,
         ILogger<MemoriesService> logger)
     {
-        _memories = memories;
-        _files = files;
-        _common = common;
-        _storage = storage;
-        _logger = logger;
+        _iMemoriesRepository = memories;
+        _iFileStorageService = files;
+        _iCommonService = common;
+        _iFamilyStorageService = storage;
+        _iLogger = logger;
     }
 
     public async Task<OutputPagedMemories> ListAsync(long familyId, InputMemoryListQueryView query)
@@ -42,7 +42,7 @@ public class MemoriesService : IMemoriesService
         var page = Math.Max(query.Page, 1);
         var pageSize = Math.Clamp(query.PageSize <= 0 ? 12 : query.PageSize, 1, 50);
 
-        return await _memories.GetListAsync(new InputMemoryList
+        return await _iMemoriesRepository.GetListAsync(new InputMemoryList
         {
             FamilyId = familyId,
             Search = query.Search,
@@ -58,7 +58,7 @@ public class MemoriesService : IMemoriesService
 
     public async Task<OutputGetMemory> GetAsync(long familyId, long memoryId)
     {
-        return await _memories.GetByIdAsync(new InputGetMemory
+        return await _iMemoriesRepository.GetByIdAsync(new InputGetMemory
         {
             FamilyId = familyId,
             Id = memoryId
@@ -84,7 +84,7 @@ public class MemoriesService : IMemoriesService
             throw new BadRequestException("A memory can have at most 10 images.");
         }
 
-        var create = await _memories.CreateAsync(new InputCreateMemory
+        var create = await _iMemoriesRepository.CreateAsync(new InputCreateMemory
         {
             FamilyId = familyId,
             Title = request.Title,
@@ -93,7 +93,7 @@ public class MemoriesService : IMemoriesService
             Location = request.Location,
             CreatedBy = username
         });
-        _common.EnsureSuccess(create);
+        _iCommonService.EnsureSuccess(create);
 
         var memoryId = create.ResponseCode;
         try
@@ -135,7 +135,7 @@ public class MemoriesService : IMemoriesService
     {
         _ = await GetAsync(familyId, memoryId);
 
-        var update = await _memories.UpdateAsync(new InputUpdateMemory
+        var update = await _iMemoriesRepository.UpdateAsync(new InputUpdateMemory
         {
             FamilyId = familyId,
             Id = memoryId,
@@ -145,7 +145,7 @@ public class MemoriesService : IMemoriesService
             Location = request.Location,
             UpdatedBy = username
         });
-        _common.EnsureSuccess(update);
+        _iCommonService.EnsureSuccess(update);
 
         if (request.CoverImage is not null && request.CoverImage.Length > 0)
         {
@@ -170,13 +170,13 @@ public class MemoriesService : IMemoriesService
         var memory = await GetAsync(familyId, memoryId);
         await DeletePhysicalImagesAsync(familyId, memoryId, memory.Images, cancellationToken);
 
-        var result = await _memories.SoftDeleteAsync(new InputDeleteMemory
+        var result = await _iMemoriesRepository.SoftDeleteAsync(new InputDeleteMemory
         {
             FamilyId = familyId,
             Id = memoryId,
             CancelledBy = username
         });
-        _common.EnsureSuccess(result);
+        _iCommonService.EnsureSuccess(result);
     }
 
     public async Task<OutputMemoryImageAction> UploadImageAsync(
@@ -207,7 +207,7 @@ public class MemoriesService : IMemoriesService
         string username,
         CancellationToken cancellationToken = default)
     {
-        var image = await _memories.GetImageAsync(new InputMemoryImageGet
+        var image = await _iMemoriesRepository.GetImageAsync(new InputMemoryImageGet
         {
             FamilyId = familyId,
             MemoryId = memoryId,
@@ -221,14 +221,14 @@ public class MemoriesService : IMemoriesService
 
         try
         {
-            if (await _files.ExistsAsync(image.StorageKey, cancellationToken))
+            if (await _iFileStorageService.ExistsAsync(image.StorageKey, cancellationToken))
             {
-                await _files.DeleteAsync(image.StorageKey, cancellationToken);
+                await _iFileStorageService.DeleteAsync(image.StorageKey, cancellationToken);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(
+            _iLogger.LogError(
                 ex,
                 "Failed to delete physical memory image. FamilyId={FamilyId}, MemoryId={MemoryId}, ImageId={ImageId}, StorageKey={StorageKey}",
                 familyId,
@@ -240,16 +240,16 @@ public class MemoriesService : IMemoriesService
                 ex.Message);
         }
 
-        var deleted = await _memories.SoftDeleteImageAsync(new InputMemoryImageDelete
+        var deleted = await _iMemoriesRepository.SoftDeleteImageAsync(new InputMemoryImageDelete
         {
             FamilyId = familyId,
             MemoryId = memoryId,
             ImageId = imageId,
             CancelledBy = username
         });
-        _common.EnsureSuccess(deleted);
+        _iCommonService.EnsureSuccess(deleted);
 
-        var usage = await _storage.GetStorageUsageAsync(familyId);
+        var usage = await _iFamilyStorageService.GetStorageUsageAsync(familyId);
         var payload = deleted.Data ?? new OutputMemoryImageAction
         {
             ImageId = imageId,
@@ -272,14 +272,14 @@ public class MemoriesService : IMemoriesService
             throw new BadRequestException("Image is required.");
         }
 
-        var result = await _memories.SetCoverAsync(new InputMemoryCoverSet
+        var result = await _iMemoriesRepository.SetCoverAsync(new InputMemoryCoverSet
         {
             FamilyId = familyId,
             MemoryId = memoryId,
             ImageId = imageId,
             UpdatedBy = username
         });
-        _common.EnsureSuccess(result);
+        _iCommonService.EnsureSuccess(result);
         return await GetAsync(familyId, memoryId);
     }
 
@@ -291,7 +291,7 @@ public class MemoriesService : IMemoriesService
         bool setAsCover,
         CancellationToken cancellationToken)
     {
-        var context = await _memories.GetImageUploadContextAsync(new InputMemoryImageUploadContext
+        var context = await _iMemoriesRepository.GetImageUploadContextAsync(new InputMemoryImageUploadContext
         {
             FamilyId = familyId,
             MemoryId = memoryId
@@ -304,13 +304,13 @@ public class MemoriesService : IMemoriesService
 
         if (image.Length > 0)
         {
-            await _storage.EnsureCanUploadAsync(familyId, image.Length);
+            await _iFamilyStorageService.EnsureCanUploadAsync(familyId, image.Length);
         }
 
         FileStorageUploadResult uploaded;
         await using (var stream = image.OpenReadStream())
         {
-            uploaded = await _files.UploadAsync(new FileStorageUploadRequest
+            uploaded = await _iFileStorageService.UploadAsync(new FileStorageUploadRequest
             {
                 FamilyId = familyId,
                 MemoryId = memoryId,
@@ -323,7 +323,7 @@ public class MemoriesService : IMemoriesService
 
         try
         {
-            await _storage.EnsureCanUploadAsync(familyId, uploaded.FileSize);
+            await _iFamilyStorageService.EnsureCanUploadAsync(familyId, uploaded.FileSize);
         }
         catch
         {
@@ -333,7 +333,7 @@ public class MemoriesService : IMemoriesService
 
         try
         {
-            var commit = await _memories.CommitImageAsync(new InputMemoryImageCommit
+            var commit = await _iMemoriesRepository.CommitImageAsync(new InputMemoryImageCommit
             {
                 FamilyId = familyId,
                 MemoryId = memoryId,
@@ -346,9 +346,9 @@ public class MemoriesService : IMemoriesService
                 SetAsCover = setAsCover,
                 CreatedBy = username
             });
-            _common.EnsureSuccess(commit);
+            _iCommonService.EnsureSuccess(commit);
 
-            var usage = await _storage.GetStorageUsageAsync(familyId);
+            var usage = await _iFamilyStorageService.GetStorageUsageAsync(familyId);
             return commit.Data is null
                 ? new OutputMemoryImageAction
                 {
@@ -393,14 +393,14 @@ public class MemoriesService : IMemoriesService
 
             try
             {
-                if (await _files.ExistsAsync(image.StorageKey, cancellationToken))
+                if (await _iFileStorageService.ExistsAsync(image.StorageKey, cancellationToken))
                 {
-                    await _files.DeleteAsync(image.StorageKey, cancellationToken);
+                    await _iFileStorageService.DeleteAsync(image.StorageKey, cancellationToken);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(
+                _iLogger.LogError(
                     ex,
                     "Failed to delete physical memory image. FamilyId={FamilyId}, MemoryId={MemoryId}, ImageId={ImageId}, StorageKey={StorageKey}",
                     familyId,
@@ -418,11 +418,11 @@ public class MemoriesService : IMemoriesService
     {
         try
         {
-            await _files.DeleteAsync(storageKey, cancellationToken);
+            await _iFileStorageService.DeleteAsync(storageKey, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(
+            _iLogger.LogWarning(
                 ex,
                 "Failed to roll back physical file after image commit failure. StorageKey={StorageKey}",
                 storageKey);
@@ -437,7 +437,7 @@ public class MemoriesService : IMemoriesService
     {
         try
         {
-            var memory = await _memories.GetByIdAsync(new InputGetMemory
+            var memory = await _iMemoriesRepository.GetByIdAsync(new InputGetMemory
             {
                 FamilyId = familyId,
                 Id = memoryId
@@ -447,7 +447,7 @@ public class MemoriesService : IMemoriesService
                 await DeletePhysicalImagesAsync(familyId, memoryId, memory.Images, cancellationToken);
             }
 
-            await _memories.SoftDeleteAsync(new InputDeleteMemory
+            await _iMemoriesRepository.SoftDeleteAsync(new InputDeleteMemory
             {
                 FamilyId = familyId,
                 Id = memoryId,

@@ -29,7 +29,7 @@ public sealed class LocalFileStorageService : IFileStorageService
     };
 
     private readonly FileStorageOptions _options;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IHttpContextAccessor _iHttpContextAccessor;
     private readonly string _rootPath;
 
     public LocalFileStorageService(
@@ -38,7 +38,7 @@ public sealed class LocalFileStorageService : IFileStorageService
         IHttpContextAccessor httpContextAccessor)
     {
         _options = options.Value;
-        _httpContextAccessor = httpContextAccessor;
+        _iHttpContextAccessor = httpContextAccessor;
         _rootPath = ResolveRootPath(_options.RootPath, environment.ContentRootPath);
         Directory.CreateDirectory(_rootPath);
     }
@@ -170,7 +170,7 @@ public sealed class LocalFileStorageService : IFileStorageService
             return $"{publicBase}{relative}";
         }
 
-        var http = _httpContextAccessor.HttpContext?.Request;
+        var http = _iHttpContextAccessor.HttpContext?.Request;
         if (http is null)
         {
             return relative;

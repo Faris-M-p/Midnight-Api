@@ -1,2 +1,2 @@
--- Event type reference values (documentation / optional check helper)
--- Birth, Death, Marriage, Divorce, Graduation, Other
+-- Event type reference values (documentation / AllowedValues on API)
+-- birthday, anniversary, memorial, gathering, achievement, custom

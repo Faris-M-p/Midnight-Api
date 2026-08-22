@@ -14,11 +14,11 @@ namespace MidnightApi.Controllers;
 [Authorize]
 public class MemberController : ControllerBase
 {
-    private readonly IMembersRepository _members;
-    private readonly ICommonService _commonService;
-    private readonly IImageFileService _images;
-    private readonly IFamilyStorageService _storage;
-    private readonly IAccessAuthorizationService _authz;
+    private readonly IMembersRepository _iMembersRepository;
+    private readonly ICommonService _iCommonService;
+    private readonly IImageFileService _iImageFileService;
+    private readonly IFamilyStorageService _iFamilyStorageService;
+    private readonly IAccessAuthorizationService _iAccessAuthorizationService;
 
     public MemberController(
         IMembersRepository members,
@@ -27,19 +27,19 @@ public class MemberController : ControllerBase
         IFamilyStorageService storage,
         IAccessAuthorizationService authz)
     {
-        _members = members;
-        _commonService = commonService;
-        _images = images;
-        _storage = storage;
-        _authz = authz;
+        _iMembersRepository = members;
+        _iCommonService = commonService;
+        _iImageFileService = images;
+        _iFamilyStorageService = storage;
+        _iAccessAuthorizationService = authz;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetList([FromQuery] InputMemberListQueryView query)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
-        var data = await _members.GetListAsync(new InputMemberList
+        var data = await _iMembersRepository.GetListAsync(new InputMemberList
         {
             FamilyId = User.GetFamilyId(),
             Search = query.Search,
@@ -63,7 +63,7 @@ public class MemberController : ControllerBase
     [HttpGet("tree")]
     public async Task<IActionResult> GetTree()
     {
-        var data = await _members.GetTreeAsync(new InputMemberTree
+        var data = await _iMembersRepository.GetTreeAsync(new InputMemberTree
         {
             FamilyId = User.GetFamilyId()
         }) ?? new OutputFamilyTree();
@@ -81,9 +81,9 @@ public class MemberController : ControllerBase
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetById([FromRoute] InputMemberRouteRequestView request)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
-        var profile = await _members.GetByIdAsync(new InputGetMember
+        var profile = await _iMembersRepository.GetByIdAsync(new InputGetMember
         {
             FamilyId = User.GetFamilyId(),
             MemberId = request.Id
@@ -104,15 +104,15 @@ public class MemberController : ControllerBase
     [RequestSizeLimit(6 * 1024 * 1024)]
     public async Task<IActionResult> Create([FromForm] InputCreateMemberView request, CancellationToken cancellationToken)
     {
-        _commonService.ValidateModelState(ModelState);
-        await _authz.EnsureCanCreateMemberAsync(User, request.ParentId);
+        _iCommonService.ValidateModelState(ModelState);
+        await _iAccessAuthorizationService.EnsureCanCreateMemberAsync(User, request.ParentId);
 
         var images = request.Images ?? [];
         if (request.ProfileImage is { Length: > 0 })
         {
-            await _storage.EnsureCanUploadAsync(User.GetFamilyId(), request.ProfileImage.Length);
+            await _iFamilyStorageService.EnsureCanUploadAsync(User.GetFamilyId(), request.ProfileImage.Length);
 
-            var saved = await _images.SaveAsync(
+            var saved = await _iImageFileService.SaveAsync(
                 new ImageUploadRequest
                 {
                     File = request.ProfileImage,
@@ -122,7 +122,7 @@ public class MemberController : ControllerBase
                 Request,
                 cancellationToken);
 
-            await _storage.EnsureCanUploadAsync(User.GetFamilyId(), saved.FileSize);
+            await _iFamilyStorageService.EnsureCanUploadAsync(User.GetFamilyId(), saved.FileSize);
 
             images =
             [
@@ -138,7 +138,7 @@ public class MemberController : ControllerBase
             ];
         }
 
-        var result = await _members.CreateAsync(new InputCreateMember
+        var result = await _iMembersRepository.CreateAsync(new InputCreateMember
         {
             FamilyId = User.GetFamilyId(),
             ParentId = request.ParentId,
@@ -157,15 +157,15 @@ public class MemberController : ControllerBase
             LocationName = request.LocationName,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
-            Addresses = _commonService.ToJson(request.Addresses),
-            Images = _commonService.ToJson(images.Count == 0 ? null : images),
-            Events = _commonService.ToJson(request.Events),
-            Notes = _commonService.ToJson(request.Notes),
-            SocialLinks = _commonService.ToJson(request.SocialLinks),
+            Addresses = _iCommonService.ToJson(request.Addresses),
+            Images = _iCommonService.ToJson(images.Count == 0 ? null : images),
+            Events = _iCommonService.ToJson(request.Events),
+            Notes = _iCommonService.ToJson(request.Notes),
+            SocialLinks = _iCommonService.ToJson(request.SocialLinks),
             CreatedBy = User.GetUsername()
         });
 
-        _commonService.EnsureSuccess(result);
+        _iCommonService.EnsureSuccess(result);
         var profile = await LoadMemberOrThrow(ResolveMemberId(result));
 
         return StatusCode(StatusCodes.Status201Created, new ApiResponse<OutputGetMember>
@@ -186,15 +186,15 @@ public class MemberController : ControllerBase
         [FromForm] InputUpdateMemberView request,
         CancellationToken cancellationToken)
     {
-        _commonService.ValidateModelState(ModelState);
-        await _authz.EnsureCanEditMemberAsync(User, route.Id);
+        _iCommonService.ValidateModelState(ModelState);
+        await _iAccessAuthorizationService.EnsureCanEditMemberAsync(User, route.Id);
 
         var images = request.Images;
         if (request.ProfileImage is { Length: > 0 })
         {
-            await _storage.EnsureCanUploadAsync(User.GetFamilyId(), request.ProfileImage.Length);
+            await _iFamilyStorageService.EnsureCanUploadAsync(User.GetFamilyId(), request.ProfileImage.Length);
 
-            var saved = await _images.SaveAsync(
+            var saved = await _iImageFileService.SaveAsync(
                 new ImageUploadRequest
                 {
                     File = request.ProfileImage,
@@ -204,9 +204,9 @@ public class MemberController : ControllerBase
                 Request,
                 cancellationToken);
 
-            await _storage.EnsureCanUploadAsync(User.GetFamilyId(), saved.FileSize);
+            await _iFamilyStorageService.EnsureCanUploadAsync(User.GetFamilyId(), saved.FileSize);
 
-            images ??= (await _members.GetByIdAsync(new InputGetMember
+            images ??= (await _iMembersRepository.GetByIdAsync(new InputGetMember
             {
                 FamilyId = User.GetFamilyId(),
                 MemberId = route.Id
@@ -237,7 +237,7 @@ public class MemberController : ControllerBase
             });
         }
 
-        var result = await _members.UpdateAsync(new InputUpdateMember
+        var result = await _iMembersRepository.UpdateAsync(new InputUpdateMember
         {
             FamilyId = User.GetFamilyId(),
             MemberId = route.Id,
@@ -257,15 +257,15 @@ public class MemberController : ControllerBase
             LocationName = request.LocationName,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
-            Addresses = _commonService.ToJson(request.Addresses),
-            Images = _commonService.ToJson(images),
-            Events = _commonService.ToJson(request.Events),
-            Notes = _commonService.ToJson(request.Notes),
-            SocialLinks = _commonService.ToJson(request.SocialLinks),
+            Addresses = _iCommonService.ToJson(request.Addresses),
+            Images = _iCommonService.ToJson(images),
+            Events = _iCommonService.ToJson(request.Events),
+            Notes = _iCommonService.ToJson(request.Notes),
+            SocialLinks = _iCommonService.ToJson(request.SocialLinks),
             UpdatedBy = User.GetUsername()
         });
 
-        _commonService.EnsureSuccess(result);
+        _iCommonService.EnsureSuccess(result);
         var profile = await LoadMemberOrThrow(route.Id);
 
         return Ok(new ApiResponse<OutputGetMember>
@@ -281,26 +281,26 @@ public class MemberController : ControllerBase
     [HttpDelete("{id:long}")]
     public async Task<IActionResult> Delete([FromRoute] InputMemberRouteRequestView request)
     {
-        _commonService.ValidateModelState(ModelState);
-        await _authz.EnsureCanDeleteMemberAsync(User, request.Id);
+        _iCommonService.ValidateModelState(ModelState);
+        await _iAccessAuthorizationService.EnsureCanDeleteMemberAsync(User, request.Id);
 
-        var result = await _members.SoftDeleteAsync(new InputDeleteMember
+        var result = await _iMembersRepository.SoftDeleteAsync(new InputDeleteMember
         {
             FamilyId = User.GetFamilyId(),
             MemberId = request.Id,
             DeletedBy = User.GetUsername()
         });
 
-        return _commonService.ToActionResult(result, HttpContext.TraceIdentifier);
+        return _iCommonService.ToActionResult(result, HttpContext.TraceIdentifier);
     }
 
     [HttpPost("map-spouse")]
     public async Task<IActionResult> MapSpouse([FromBody] InputMapSpouseView request)
     {
-        _commonService.ValidateModelState(ModelState);
-        await _authz.EnsureCanMapSpouseAsync(User, request.MemberId, request.SpouseId);
+        _iCommonService.ValidateModelState(ModelState);
+        await _iAccessAuthorizationService.EnsureCanMapSpouseAsync(User, request.MemberId, request.SpouseId);
 
-        var result = await _members.MapSpouseAsync(new InputMapSpouse
+        var result = await _iMembersRepository.MapSpouseAsync(new InputMapSpouse
         {
             FamilyId = User.GetFamilyId(),
             MemberId = request.MemberId,
@@ -308,12 +308,12 @@ public class MemberController : ControllerBase
             UpdatedBy = User.GetUsername()
         });
 
-        return _commonService.ToActionResult(result, HttpContext.TraceIdentifier);
+        return _iCommonService.ToActionResult(result, HttpContext.TraceIdentifier);
     }
 
     private async Task<OutputGetMember> LoadMemberOrThrow(long memberId)
     {
-        return await _members.GetByIdAsync(new InputGetMember
+        return await _iMembersRepository.GetByIdAsync(new InputGetMember
         {
             FamilyId = User.GetFamilyId(),
             MemberId = memberId

@@ -14,12 +14,12 @@ namespace MidnightApi.Controllers;
 [Authorize(Roles = AuthRoles.Admin)]
 public class AccessTokenController : ControllerBase
 {
-    private readonly IAccessTokensRepository _tokens;
-    private readonly IFamiliesRepository _families;
-    private readonly ICommonService _commonService;
-    private readonly IPasswordService _passwordService;
-    private readonly IJwtTokenService _jwt;
-    private readonly IAccessTokenSecretGenerator _secrets;
+    private readonly IAccessTokensRepository _iAccessTokensRepository;
+    private readonly IFamiliesRepository _iFamiliesRepository;
+    private readonly ICommonService _iCommonService;
+    private readonly IPasswordService _iPasswordService;
+    private readonly IJwtTokenService _iJwtTokenService;
+    private readonly IAccessTokenSecretGenerator _iAccessTokenSecretGenerator;
 
     public AccessTokenController(
         IAccessTokensRepository tokens,
@@ -29,36 +29,36 @@ public class AccessTokenController : ControllerBase
         IJwtTokenService jwt,
         IAccessTokenSecretGenerator secrets)
     {
-        _tokens = tokens;
-        _families = families;
-        _commonService = commonService;
-        _passwordService = passwordService;
-        _jwt = jwt;
-        _secrets = secrets;
+        _iAccessTokensRepository = tokens;
+        _iFamiliesRepository = families;
+        _iCommonService = commonService;
+        _iPasswordService = passwordService;
+        _iJwtTokenService = jwt;
+        _iAccessTokenSecretGenerator = secrets;
     }
 
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] InputAccessTokenLoginView request)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
         const string invalidMessage = "Invalid family code or access token.";
         var rawToken = request.AccessToken.Trim();
 
-        if (!_secrets.TryParse(rawToken, out var familyCodePrefix, out _))
+        if (!_iAccessTokenSecretGenerator.TryParse(rawToken, out var familyCodePrefix, out _))
         {
             throw new UnauthorizedAccessException(invalidMessage);
         }
 
-        var family = await _families.GetByCodeAsync(new InputGetFamilyByCode { FamilyCode = familyCodePrefix });
+        var family = await _iFamiliesRepository.GetByCodeAsync(new InputGetFamilyByCode { FamilyCode = familyCodePrefix });
         if (family is null
-            || !_secrets.MatchesFamilyPrefix(rawToken, family.FamilyCode))
+            || !_iAccessTokenSecretGenerator.MatchesFamilyPrefix(rawToken, family.FamilyCode))
         {
             throw new UnauthorizedAccessException(invalidMessage);
         }
 
-        var candidates = await _tokens.ListForLoginAsync(new InputAccessTokenList
+        var candidates = await _iAccessTokensRepository.ListForLoginAsync(new InputAccessTokenList
         {
             FamilyId = family.Id
         });
@@ -66,7 +66,7 @@ public class AccessTokenController : ControllerBase
         OutputAccessTokenLoginCandidate? matched = null;
         foreach (var candidate in candidates)
         {
-            if (_passwordService.Verify(rawToken, candidate.TokenHash))
+            if (_iPasswordService.Verify(rawToken, candidate.TokenHash))
             {
                 matched = candidate;
                 break;
@@ -99,13 +99,13 @@ public class AccessTokenController : ControllerBase
             throw new UnauthorizedAccessException(invalidMessage);
         }
 
-        _ = await _tokens.RecordLoginAsync(new InputAccessTokenRecordLogin
+        _ = await _iAccessTokensRepository.RecordLoginAsync(new InputAccessTokenRecordLogin
         {
             FamilyId = family.Id,
             TokenId = matched.Id
         });
 
-        var (jwt, expiresAt) = _jwt.CreateAccessTokenSession(
+        var (jwt, expiresAt) = _iJwtTokenService.CreateAccessTokenSession(
             family.Id,
             matched.Id,
             matched.TokenName,
@@ -143,7 +143,7 @@ public class AccessTokenController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetList()
     {
-        var items = await _tokens.GetListAsync(new InputAccessTokenList
+        var items = await _iAccessTokensRepository.GetListAsync(new InputAccessTokenList
         {
             FamilyId = User.GetFamilyId()
         });
@@ -161,7 +161,7 @@ public class AccessTokenController : ControllerBase
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetById([FromRoute] InputAccessTokenRouteRequestView request)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
         var token = await LoadTokenOrThrow(request.Id);
 
@@ -178,24 +178,24 @@ public class AccessTokenController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] InputCreateAccessTokenView request)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
         ValidateScopeMember(request.Scope, request.MemberId);
 
         var familyId = User.GetFamilyId();
-        var family = await _families.GetByIdAsync(new InputGetFamily { Id = familyId })
+        var family = await _iFamiliesRepository.GetByIdAsync(new InputGetFamily { Id = familyId })
             ?? throw new NotFoundException("Family not found.");
 
-        var expiresOn = _secrets.ResolveExpiresOn(request.ExpiryPreset, request.CustomExpiresOn);
+        var expiresOn = _iAccessTokenSecretGenerator.ResolveExpiresOn(request.ExpiryPreset, request.CustomExpiresOn);
         if (expiresOn <= DateTimeOffset.UtcNow)
         {
             throw new BadRequestException("Expiry must be in the future.");
         }
 
-        var rawToken = _secrets.GenerateRawToken(family.FamilyCode);
-        var tokenHash = _passwordService.Hash(rawToken);
-        var tokenPreview = _secrets.BuildPreview(rawToken);
+        var rawToken = _iAccessTokenSecretGenerator.GenerateRawToken(family.FamilyCode);
+        var tokenHash = _iPasswordService.Hash(rawToken);
+        var tokenPreview = _iAccessTokenSecretGenerator.BuildPreview(rawToken);
 
-        var result = await _tokens.CreateAsync(new InputCreateAccessToken
+        var result = await _iAccessTokensRepository.CreateAsync(new InputCreateAccessToken
         {
             FamilyId = familyId,
             TokenName = request.TokenName,
@@ -208,7 +208,7 @@ public class AccessTokenController : ControllerBase
             CreatedBy = User.GetUsername()
         });
 
-        _commonService.EnsureSuccess(result);
+        _iCommonService.EnsureSuccess(result);
         var tokenId = ResolveTokenId(result);
         var token = await LoadTokenOrThrow(tokenId);
 
@@ -232,18 +232,18 @@ public class AccessTokenController : ControllerBase
         [FromRoute] InputAccessTokenRouteRequestView route,
         [FromBody] InputUpdateAccessTokenView request)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
         ValidateScopeMember(request.Scope, request.MemberId);
 
         _ = await LoadTokenOrThrow(route.Id);
 
-        var expiresOn = _secrets.ResolveExpiresOn(request.ExpiryPreset, request.CustomExpiresOn);
+        var expiresOn = _iAccessTokenSecretGenerator.ResolveExpiresOn(request.ExpiryPreset, request.CustomExpiresOn);
         if (expiresOn <= DateTimeOffset.UtcNow)
         {
             throw new BadRequestException("Expiry must be in the future.");
         }
 
-        var result = await _tokens.UpdateAsync(new InputUpdateAccessToken
+        var result = await _iAccessTokensRepository.UpdateAsync(new InputUpdateAccessToken
         {
             FamilyId = User.GetFamilyId(),
             TokenId = route.Id,
@@ -255,7 +255,7 @@ public class AccessTokenController : ControllerBase
             UpdatedBy = User.GetUsername()
         });
 
-        _commonService.EnsureSuccess(result);
+        _iCommonService.EnsureSuccess(result);
         var token = await LoadTokenOrThrow(route.Id);
 
         return Ok(new ApiResponse<OutputGetAccessToken>
@@ -273,11 +273,11 @@ public class AccessTokenController : ControllerBase
         [FromRoute] InputAccessTokenRouteRequestView route,
         [FromBody] InputSetAccessTokenStatusView request)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
         _ = await LoadTokenOrThrow(route.Id);
 
-        var result = await _tokens.SetStatusAsync(new InputSetAccessTokenStatus
+        var result = await _iAccessTokensRepository.SetStatusAsync(new InputSetAccessTokenStatus
         {
             FamilyId = User.GetFamilyId(),
             TokenId = route.Id,
@@ -285,7 +285,7 @@ public class AccessTokenController : ControllerBase
             UpdatedBy = User.GetUsername()
         });
 
-        _commonService.EnsureSuccess(result);
+        _iCommonService.EnsureSuccess(result);
         var token = await LoadTokenOrThrow(route.Id);
 
         return Ok(new ApiResponse<OutputGetAccessToken>
@@ -301,18 +301,18 @@ public class AccessTokenController : ControllerBase
     [HttpDelete("{id:long}")]
     public async Task<IActionResult> Delete([FromRoute] InputAccessTokenRouteRequestView route)
     {
-        _commonService.ValidateModelState(ModelState);
+        _iCommonService.ValidateModelState(ModelState);
 
         _ = await LoadTokenOrThrow(route.Id);
 
-        var result = await _tokens.SoftDeleteAsync(new InputDeleteAccessToken
+        var result = await _iAccessTokensRepository.SoftDeleteAsync(new InputDeleteAccessToken
         {
             FamilyId = User.GetFamilyId(),
             TokenId = route.Id,
             CancelledBy = User.GetUsername()
         });
 
-        _commonService.EnsureSuccess(result);
+        _iCommonService.EnsureSuccess(result);
 
         return Ok(new ApiResponse<object?>
         {
@@ -326,7 +326,7 @@ public class AccessTokenController : ControllerBase
 
     private async Task<OutputGetAccessToken> LoadTokenOrThrow(long tokenId)
     {
-        return await _tokens.GetByIdAsync(new InputGetAccessToken
+        return await _iAccessTokensRepository.GetByIdAsync(new InputGetAccessToken
         {
             FamilyId = User.GetFamilyId(),
             TokenId = tokenId

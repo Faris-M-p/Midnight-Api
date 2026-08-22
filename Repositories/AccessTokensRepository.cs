@@ -7,42 +7,42 @@ namespace MidnightApi.Repositories;
 
 public class AccessTokensRepository : IAccessTokensRepository
 {
-    private readonly IDataAccessDapper _dataAccessDapper;
+    private readonly IDataAccessDapper _iDataAccessDapper;
 
     public AccessTokensRepository(IDataAccessDapper dataAccessDapper)
     {
-        _dataAccessDapper = dataAccessDapper;
+        _iDataAccessDapper = dataAccessDapper;
     }
 
     public Task<List<OutputAccessTokenItem>> GetListAsync(InputAccessTokenList input) =>
-        _dataAccessDapper.GetListByStoredProcedureAsync<OutputAccessTokenItem>(
+        _iDataAccessDapper.GetListByStoredProcedureAsync<OutputAccessTokenItem>(
             StoredProcedures.AccessTokenList, input);
 
     public Task<OutputGetAccessToken?> GetByIdAsync(InputGetAccessToken input) =>
-        _dataAccessDapper.GetPayloadByStoredProcedureAsync<OutputGetAccessToken>(
+        _iDataAccessDapper.GetPayloadByStoredProcedureAsync<OutputGetAccessToken>(
             StoredProcedures.AccessTokenSelect, input);
 
     public Task<OutputCreateAccessToken> CreateAsync(InputCreateAccessToken input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputCreateAccessToken>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputCreateAccessToken>(
             StoredProcedures.AccessTokenInsert, input);
 
     public Task<OutputUpdateAccessToken> UpdateAsync(InputUpdateAccessToken input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputUpdateAccessToken>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputUpdateAccessToken>(
             StoredProcedures.AccessTokenUpdate, input);
 
     public Task<OutputSetAccessTokenStatus> SetStatusAsync(InputSetAccessTokenStatus input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputSetAccessTokenStatus>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputSetAccessTokenStatus>(
             StoredProcedures.AccessTokenSetStatus, input);
 
     public Task<OutputDeleteAccessToken> SoftDeleteAsync(InputDeleteAccessToken input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputDeleteAccessToken>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputDeleteAccessToken>(
             StoredProcedures.AccessTokenDelete, input);
 
     public Task<List<OutputAccessTokenLoginCandidate>> ListForLoginAsync(InputAccessTokenList input) =>
-        _dataAccessDapper.GetListByStoredProcedureAsync<OutputAccessTokenLoginCandidate>(
+        _iDataAccessDapper.GetListByStoredProcedureAsync<OutputAccessTokenLoginCandidate>(
             StoredProcedures.AccessTokenListForLogin, input);
 
     public Task<OutputAccessTokenRecordLogin> RecordLoginAsync(InputAccessTokenRecordLogin input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputAccessTokenRecordLogin>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputAccessTokenRecordLogin>(
             StoredProcedures.AccessTokenRecordLogin, input);
 }

@@ -7,16 +7,16 @@ namespace MidnightApi.Repositories;
 
 public class MembersRepository : IMembersRepository
 {
-    public readonly IDataAccessDapper _dataAccessDapper;
+    public readonly IDataAccessDapper _iDataAccessDapper;
 
     public MembersRepository(IDataAccessDapper dataAccessDapper)
     {
-        _dataAccessDapper = dataAccessDapper;
+        _iDataAccessDapper = dataAccessDapper;
     }
 
     public async Task<OutputPagedMembers?> GetListAsync(InputMemberList input)
     {
-        var (items, totalCount) = await _dataAccessDapper.GetPagedListByStoredProcedureAsync<OutputMemberListItem>(
+        var (items, totalCount) = await _iDataAccessDapper.GetPagedListByStoredProcedureAsync<OutputMemberListItem>(
             StoredProcedures.MemberList, input);
 
         var page = Math.Max(input.Page, 1);
@@ -33,40 +33,40 @@ public class MembersRepository : IMembersRepository
     }
 
     public Task<OutputFamilyTree?> GetTreeAsync(InputMemberTree input) =>
-        _dataAccessDapper.GetPayloadByStoredProcedureAsync<OutputFamilyTree>(
+        _iDataAccessDapper.GetPayloadByStoredProcedureAsync<OutputFamilyTree>(
             StoredProcedures.MemberTree, input);
 
     public Task<OutputGetMember?> GetByIdAsync(InputGetMember input) =>
-        _dataAccessDapper.GetPayloadByStoredProcedureAsync<OutputGetMember>(
+        _iDataAccessDapper.GetPayloadByStoredProcedureAsync<OutputGetMember>(
             StoredProcedures.MemberSelect, input);
 
     public Task<OutputCreateMember> CreateAsync(InputCreateMember input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputCreateMember>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputCreateMember>(
             StoredProcedures.MemberInsert, input);
 
     public Task<OutputUpdateMember> UpdateAsync(InputUpdateMember input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputUpdateMember>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputUpdateMember>(
             StoredProcedures.MemberUpdate, input);
 
     public Task<OutputDeleteMember> SoftDeleteAsync(InputDeleteMember input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputDeleteMember>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputDeleteMember>(
             StoredProcedures.MemberDelete, input);
 
     public Task<OutputMapSpouse> MapSpouseAsync(InputMapSpouse input) =>
-        _dataAccessDapper.GetSingleByStoredProcedureAsync<OutputMapSpouse>(
+        _iDataAccessDapper.GetSingleByStoredProcedureAsync<OutputMapSpouse>(
             StoredProcedures.MemberMapSpouse, input);
 
     public Task<OutputDashboard?> GetDashboardAsync(InputMemberDashboard input) =>
-        _dataAccessDapper.GetPayloadByStoredProcedureAsync<OutputDashboard>(
+        _iDataAccessDapper.GetPayloadByStoredProcedureAsync<OutputDashboard>(
             StoredProcedures.MemberDashboard, input);
 
     public Task<List<OutputTimelineItem>> GetTimelineAsync(InputMemberTimeline input) =>
-        _dataAccessDapper.GetListByStoredProcedureAsync<OutputTimelineItem>(
+        _iDataAccessDapper.GetListByStoredProcedureAsync<OutputTimelineItem>(
             StoredProcedures.MemberTimeline, input);
 
     public async Task<bool> IsInScopeBranchAsync(InputMemberScopeCheck input)
     {
-        var row = await _dataAccessDapper.GetSingleOrDefaultByStoredProcedureAsync<OutputMemberScopeCheck>(
+        var row = await _iDataAccessDapper.GetSingleOrDefaultByStoredProcedureAsync<OutputMemberScopeCheck>(
             StoredProcedures.MemberIsInScopeBranch, input);
         return row?.IsInBranch == true;
     }
