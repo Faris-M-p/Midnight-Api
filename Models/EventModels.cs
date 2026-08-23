@@ -360,11 +360,20 @@ public class OutputCreateEvent : CommonResponse<OutputGetEvent>
 {
 }
 
-public class OutputUpdateEvent : CommonResponse<OutputGetEvent>
+/// <summary>
+/// Update payload includes the full event plus the previous cover storage key
+/// (for physical file cleanup after a successful replace/remove).
+/// </summary>
+public class OutputUpdateEventData : OutputGetEvent
+{
+    public string? PreviousStorageKey { get; set; }
+}
+
+public class OutputUpdateEvent : CommonResponse<OutputUpdateEventData>
 {
 }
 
-public class OutputDeleteEvent : CommonResponse<IdResponse>
+public class OutputDeleteEvent : CommonResponse<EventCoverActionData>
 {
 }
 

@@ -152,8 +152,7 @@ public class EventsController : ControllerBase
         catch
         {
             if (uploadedCover is not null
-                && !string.IsNullOrWhiteSpace(uploadedCover.StorageKey)
-                && await _iFileStorageService.ExistsAsync(uploadedCover.StorageKey, cancellationToken))
+                && !string.IsNullOrWhiteSpace(uploadedCover.StorageKey))
             {
                 await _iFileStorageService.DeleteAsync(uploadedCover.StorageKey, cancellationToken);
             }
@@ -176,11 +175,6 @@ public class EventsController : ControllerBase
 
         var familyId = User.GetFamilyId();
         var username = User.GetUsername();
-        var existing = await _iEventsRepository.GetByIdAsync(new InputGetEvent
-        {
-            FamilyId = familyId,
-            Id = route.Id
-        }) ?? throw new NotFoundException("Event not found.");
 
         FileStorageUploadResult? uploadedCover = null;
 
@@ -230,11 +224,10 @@ public class EventsController : ControllerBase
             var data = result.Data ?? throw new NotFoundException("Event not found.");
 
             if ((request.RemoveCover || uploadedCover is not null)
-                && !string.IsNullOrWhiteSpace(existing.CoverStorageKey)
-                && !string.Equals(existing.CoverStorageKey, uploadedCover?.StorageKey, StringComparison.Ordinal)
-                && await _iFileStorageService.ExistsAsync(existing.CoverStorageKey, cancellationToken))
+                && !string.IsNullOrWhiteSpace(data.PreviousStorageKey)
+                && !string.Equals(data.PreviousStorageKey, uploadedCover?.StorageKey, StringComparison.Ordinal))
             {
-                await _iFileStorageService.DeleteAsync(existing.CoverStorageKey, cancellationToken);
+                await _iFileStorageService.DeleteAsync(data.PreviousStorageKey, cancellationToken);
             }
 
             return Ok(new ApiResponse<OutputGetEvent>
@@ -249,8 +242,7 @@ public class EventsController : ControllerBase
         catch
         {
             if (uploadedCover is not null
-                && !string.IsNullOrWhiteSpace(uploadedCover.StorageKey)
-                && await _iFileStorageService.ExistsAsync(uploadedCover.StorageKey, cancellationToken))
+                && !string.IsNullOrWhiteSpace(uploadedCover.StorageKey))
             {
                 await _iFileStorageService.DeleteAsync(uploadedCover.StorageKey, cancellationToken);
             }
@@ -267,18 +259,6 @@ public class EventsController : ControllerBase
         _iCommonService.ValidateModelState(ModelState);
         _iAccessAuthorizationService.EnsureCanEditFamily(User);
 
-        var existing = await _iEventsRepository.GetByIdAsync(new InputGetEvent
-        {
-            FamilyId = User.GetFamilyId(),
-            Id = route.Id
-        }) ?? throw new NotFoundException("Event not found.");
-
-        if (!string.IsNullOrWhiteSpace(existing.CoverStorageKey)
-            && await _iFileStorageService.ExistsAsync(existing.CoverStorageKey, cancellationToken))
-        {
-            await _iFileStorageService.DeleteAsync(existing.CoverStorageKey, cancellationToken);
-        }
-
         var result = await _iEventsRepository.SoftDeleteAsync(new InputDeleteEvent
         {
             FamilyId = User.GetFamilyId(),
@@ -286,6 +266,12 @@ public class EventsController : ControllerBase
             CancelledBy = User.GetUsername()
         });
         _iCommonService.EnsureSuccess(result);
+
+        var previousStorageKey = result.Data?.PreviousStorageKey;
+        if (!string.IsNullOrWhiteSpace(previousStorageKey))
+        {
+            await _iFileStorageService.DeleteAsync(previousStorageKey, cancellationToken);
+        }
 
         return Ok(new ApiResponse<object?>
         {

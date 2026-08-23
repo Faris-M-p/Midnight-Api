@@ -26,13 +26,16 @@ DECLARE
     v_member_id BIGINT;
     v_member_ids BIGINT[] := ARRAY[]::BIGINT[];
     v_replace_cover BOOLEAN := FALSE;
+    v_old_key VARCHAR;
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM "Events"
-        WHERE "ID_Events" = "p_ID_Events"
-          AND "FK_Families" = "p_FK_Families"
-          AND "IsCancelled" = FALSE
-    ) THEN
+    SELECT e."CoverStorageKey"
+    INTO v_old_key
+    FROM "Events" e
+    WHERE e."ID_Events" = "p_ID_Events"
+      AND e."FK_Families" = "p_FK_Families"
+      AND e."IsCancelled" = FALSE;
+
+    IF NOT FOUND THEN
         "p_ResponseCode" := 30;
         "p_Status" := FALSE;
         "p_ResponseMessage" := 'Event not found.';
@@ -185,6 +188,7 @@ BEGIN
         'CoverStorageKey', e."CoverStorageKey",
         'CoverFileSize', e."CoverFileSize",
         'CoverMimeType', e."CoverMimeType",
+        'PreviousStorageKey', v_old_key,
         'Members', COALESCE((
             SELECT jsonb_agg(
                 jsonb_build_object(
